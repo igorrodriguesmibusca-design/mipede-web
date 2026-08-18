@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+test("account_not_linked mostra mensagem segura", async ({ page }) => {
+  await page.goto("/entrar?error=account_not_linked");
+  await expect(
+    page.getByText("Já existe uma conta com este e-mail. Não foi possível vincular o acesso pelo Google."),
+  ).toBeVisible();
+});
+
 test("botão Google visível e senha escondida no login", async ({ page }) => {
   await page.goto("/entrar");
   await expect(page.getByRole("heading", { name: "Acesse sua conta" })).toBeVisible();
