@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 
+import { BFF_SECRET_HEADER, bffSharedSecret } from "./bff";
 import { allowVisualDemo, controlApiUrl, SESSION_COOKIE_NAMES } from "./config";
 import type { StoreRole, StoreStatus } from "./roles";
 
@@ -42,8 +43,11 @@ export async function getTenantView(): Promise<TenantView> {
 
   if (base && requestHasSessionCookie(cookieHeader)) {
     try {
+      const headers: HeadersInit = { cookie: cookieHeader };
+      const shared = bffSharedSecret();
+      if (shared) headers[BFF_SECRET_HEADER] = shared;
       const response = await fetch(`${base}/api/mipede/v1/me`, {
-        headers: { cookie: cookieHeader },
+        headers,
         cache: "no-store",
       });
       if (response.ok) {
