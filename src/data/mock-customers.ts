@@ -7,6 +7,9 @@ export type StoreCustomer = {
   phone: string;
   orders: number;
   spent: number;
+  ticket: number;
+  addressCount: number;
+  status: "Ativo";
   origin: CustomerOrigin;
   lastPurchase: string;
   tone: "rose" | "green" | "blue" | "slate" | "amber";
@@ -14,12 +17,29 @@ export type StoreCustomer = {
 
 export const customers: StoreCustomer[] = [
   {
+    id: "cust_juliana_lima",
+    name: "Juliana Lima",
+    initials: "JL",
+    phone: "(11) 98765-4321",
+    orders: 2,
+    spent: 74.39,
+    ticket: 37.2,
+    addressCount: 2,
+    status: "Ativo",
+    origin: "Instagram orgânico",
+    lastPurchase: "17/08/2025 às 20:39",
+    tone: "rose",
+  },
+  {
     id: "1",
     name: "Lucas Almeida",
     initials: "LA",
     phone: "(11) 98765-4321",
     orders: 14,
     spent: 734.5,
+    ticket: 52.46,
+    addressCount: 2,
+    status: "Ativo",
     origin: "Instagram orgânico",
     lastPurchase: "05/05/2025 às 20:18",
     tone: "rose",
@@ -31,6 +51,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 97654-3210",
     orders: 9,
     spent: 468.9,
+    ticket: 52.1,
+    addressCount: 1,
+    status: "Ativo",
     origin: "Meta Ads",
     lastPurchase: "04/05/2025 às 19:45",
     tone: "green",
@@ -42,6 +65,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 96543-2109",
     orders: 7,
     spent: 329.7,
+    ticket: 47.1,
+    addressCount: 1,
+    status: "Ativo",
     origin: "WhatsApp",
     lastPurchase: "03/05/2025 às 21:03",
     tone: "blue",
@@ -53,6 +79,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 95432-1098",
     orders: 12,
     spent: 612.3,
+    ticket: 51.03,
+    addressCount: 2,
+    status: "Ativo",
     origin: "Direto",
     lastPurchase: "03/05/2025 às 18:22",
     tone: "slate",
@@ -64,6 +93,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 94321-0987",
     orders: 5,
     spent: 210.0,
+    ticket: 42,
+    addressCount: 1,
+    status: "Ativo",
     origin: "Meta Ads",
     lastPurchase: "02/05/2025 às 20:07",
     tone: "blue",
@@ -75,6 +107,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 93210-9876",
     orders: 11,
     spent: 558.4,
+    ticket: 50.76,
+    addressCount: 2,
+    status: "Ativo",
     origin: "Instagram orgânico",
     lastPurchase: "02/05/2025 às 19:11",
     tone: "rose",
@@ -86,6 +121,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 92109-8765",
     orders: 8,
     spent: 402.8,
+    ticket: 50.35,
+    addressCount: 1,
+    status: "Ativo",
     origin: "WhatsApp",
     lastPurchase: "01/05/2025 às 20:33",
     tone: "amber",
@@ -97,6 +135,9 @@ export const customers: StoreCustomer[] = [
     phone: "(11) 91098-7654",
     orders: 6,
     spent: 275.6,
+    ticket: 45.93,
+    addressCount: 1,
+    status: "Ativo",
     origin: "Direto",
     lastPurchase: "30/04/2025 às 18:49",
     tone: "amber",

@@ -65,10 +65,10 @@ export default function CustomersPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
+          <table className="w-full min-w-[1080px] text-left text-sm">
             <thead className="bg-zinc-50 text-xs text-subtle">
               <tr>
-                {["Cliente", "WhatsApp", "Pedidos", "Total gasto", "Origem", "Última compra", "Ações"].map(
+                {["Cliente", "WhatsApp", "Pedidos", "Total gasto", "Ticket médio", "Endereços", "Status", "Última compra", "Origem", "Ações"].map(
                   (head) => (
                     <th key={head} className="px-4 py-3 font-medium">
                       {head}
@@ -96,12 +96,15 @@ export default function CustomersPage() {
                   <td className="px-4 py-3">{customer.phone}</td>
                   <td className="px-4 py-3">{customer.orders}</td>
                   <td className="px-4 py-3">{formatCurrency(customer.spent)}</td>
+                  <td className="px-4 py-3">{formatCurrency(customer.ticket)}</td>
+                  <td className="px-4 py-3">{customer.addressCount}</td>
+                  <td className="px-4 py-3">{customer.status}</td>
+                  <td className="px-4 py-3">{customer.lastPurchase}</td>
                   <td className="px-4 py-3">
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", originClass[customer.origin])}>
                       {customer.origin}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{customer.lastPurchase}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex gap-2 text-zinc-400">
                       <Eye className="size-4" />
