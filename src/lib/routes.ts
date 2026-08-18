@@ -47,6 +47,10 @@ export const routes = {
   platform: {
     root: "/plataforma",
     stores: "/plataforma/estabelecimentos",
+    store: (id: string) => `/plataforma/estabelecimentos/${id}`,
+    admins: "/plataforma/administradores",
+    audit: "/plataforma/auditoria",
+    invite: (token: string) => `/plataforma/convites/${token}`,
   },
   managerFor: (slug: string) => ({
     root: `/gestor/${slug}`,

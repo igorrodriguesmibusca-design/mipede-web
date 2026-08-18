@@ -7,6 +7,24 @@ import { isEmailPasswordAuthEnabled, isGoogleAuthEnabled, isPasswordAuthPath, PA
 import { authorizePlatform, authorizeStoreAccess, rejectRoleEscalation } from "../../../src/server/authorize";
 import { MemoryRateLimiter } from "../../../src/server/rate-limit";
 import { resolvePostAuthDestination } from "../../../src/server/redirects";
+import {
+  acceptInvite,
+  bootstrapOwner,
+  canBootstrapFlag,
+  createInvite,
+  dashboard,
+  decideStore,
+  getStore,
+  listAdmins,
+  listAudit,
+  listStores,
+  loadPlatformRole,
+  removeAdmin,
+  renewInvite,
+  requirePlatform,
+  revokeInvite,
+  setAdminStatus,
+} from "./platform";
 import { PRIVACY_VERSION, TERMS_INTENT_COOKIE, TERMS_INTENT_MAX_AGE, TERMS_VERSION } from "../../../src/server/terms";
 import {
   canAccessPlatform,
@@ -44,6 +62,8 @@ export interface ControlEnv {
   GOOGLE_CLIENT_SECRET?: string;
   MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED?: string;
   MIPEDE_GOOGLE_AUTH_ENABLED?: string;
+  MIPEDE_PII_ENCRYPTION_KEY?: string;
+  MIPEDE_EMAIL_LOOKUP_KEY?: string;
 }
 
 const limiter = new MemoryRateLimiter(8, 60_000);
@@ -276,7 +296,7 @@ async function loadContext(env: ControlEnv, userId: string, email: string, verif
     userId,
     email,
     emailVerified: verified || googleAccount,
-    platformRole: isPlatformEmail(env, email) ? "platform_admin" : null,
+    platformRole: await loadPlatformRole(env, userId),
     memberships: (members.results ?? [])
       .filter((item) => item.storeId)
       .map((item) => ({
@@ -428,7 +448,7 @@ export default {
           // Tabela ainda não migrada não pode impedir o login Google.
         }
       }
-      if (current.context.platformRole === "platform_admin") {
+      if (canAccessPlatform(current.context)) {
         await writeAudit(env, {
           actor: current.context.userId,
           action: "platform_admin_recognized",
@@ -444,7 +464,7 @@ export default {
             .first<{ slug: string; status: StoreStatus; onboarding_status: string }>()
         : null;
       const path = resolvePostAuthDestination({
-        platformAdmin: current.context.platformRole === "platform_admin",
+        platformAdmin: canAccessPlatform(current.context),
         store: store
           ? {
               slug: store.slug,
@@ -597,6 +617,7 @@ export default {
           emailVerified: current.context.emailVerified,
         },
         platformRole: current.context.platformRole,
+        canBootstrap: await canBootstrapFlag(env, current.context.email, current.context.emailVerified),
         store: storeRow
           ? {
               organizationId: storeRow.organization_id,
@@ -741,55 +762,189 @@ export default {
       return json({ error: "unknown_step" }, 404);
     }
 
-    if (url.pathname === "/api/mipede/v1/platform/stores" && request.method === "GET") {
+    if (url.pathname === "/api/mipede/v1/platform/bootstrap" && request.method === "POST") {
+      const blocked = rateLimit(`platform-bootstrap:${ip}`);
+      if (blocked) return blocked;
       const current = await sessionContext(request, env);
-      const decision = authorizePlatform(current?.context ?? null);
-      if (!decision.ok) return json({ error: decision.error }, decision.status);
-      const rows = await env.DB.prepare(
-        `SELECT s.id, s.name, s.slug, s.status, s.onboarding_status, s.provisioning_status, s.city, s.created_at, u.name as owner_name, u.email as owner_email
-         FROM stores s
-         LEFT JOIN user u ON u.id = s.owner_user_id
-         ORDER BY s.created_at DESC`,
-      ).all();
-      return json({ stores: rows.results ?? [] });
+      if (!current) return json({ error: "unauthenticated" }, 401);
+      const result = await bootstrapOwner(env, {
+        userId: current.context.userId,
+        email: current.context.email,
+        name: current.session.user.name || "Igor Rodrigues",
+        verified: current.context.emailVerified,
+      });
+      if (result.ok) {
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "platform_owner_bootstrapped",
+          resourceType: "platform",
+          resourceId: current.context.userId,
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+      }
+      return result;
     }
 
-    if (url.pathname.startsWith("/api/mipede/v1/platform/stores/") && request.method === "POST") {
+    if (url.pathname.startsWith("/api/mipede/v1/platform/")) {
+      const blocked = rateLimit(`platform:${ip}`);
+      if (blocked) return blocked;
       const current = await sessionContext(request, env);
-      const decision = authorizePlatform(current?.context ?? null);
-      if (!decision.ok) return json({ error: decision.error }, decision.status);
-      const parsed = platformDecisionSchema.safeParse(await request.json().catch(() => ({})));
-      if (!parsed.success) return json({ error: "invalid_input" }, 400);
-      const storeId = url.pathname.split("/").at(-1);
-      const status =
-        parsed.data.action === "approve"
-          ? "APPROVED"
-          : parsed.data.action === "reject"
-            ? "REJECTED"
-            : parsed.data.action === "suspend"
-              ? "SUSPENDED"
-              : "ACTIVE";
-      await env.DB.prepare(
-        `UPDATE stores SET status = ?, approved_at = ?, approved_by = ?, rejection_reason = ?, updated_at = ? WHERE id = ?`,
-      )
-        .bind(
-          status,
-          parsed.data.action === "approve" ? Date.now() : null,
-          current?.context.userId ?? null,
-          parsed.data.reason ?? null,
-          Date.now(),
-          storeId,
-        )
-        .run();
-      await writeAudit(env, {
-        actor: current?.context.userId,
-        action: parsed.data.action,
-        resourceType: "store",
-        resourceId: storeId,
-        ip,
-        ua: request.headers.get("user-agent") ?? undefined,
-      });
-      return json({ ok: true, status });
+      if (!current) return json({ error: "unauthenticated" }, 401);
+
+      if (url.pathname === "/api/mipede/v1/platform/invites/accept" && request.method === "POST") {
+        const acceptLimit = rateLimit(`invite-accept:${ip}`);
+        if (acceptLimit) return acceptLimit;
+        const body = (await request.json().catch(() => ({}))) as { token?: string };
+        if (!body.token) return json({ error: "invalid_input" }, 400);
+        const accepted = await acceptInvite(env, body.token, {
+          userId: current.context.userId,
+          email: current.context.email,
+          name: current.session.user.name || current.context.email,
+          verified: current.context.emailVerified,
+        });
+        if (accepted.ok) {
+          await writeAudit(env, {
+            actor: current.context.userId,
+            action: "platform_admin_added",
+            resourceType: "platform_admin",
+            ip,
+            ua: request.headers.get("user-agent") ?? undefined,
+          });
+        }
+        return accepted;
+      }
+
+      const gate = await requirePlatform(env, current.context.userId, "access_panel");
+      if (!gate.ok) return json({ error: gate.error }, gate.status);
+
+      if (url.pathname === "/api/mipede/v1/platform/dashboard" && request.method === "GET") {
+        return dashboard(env);
+      }
+      if (url.pathname === "/api/mipede/v1/platform/stores" && request.method === "GET") {
+        return listStores(env);
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/stores\/[^/]+$/) && request.method === "GET") {
+        return getStore(env, url.pathname.split("/").at(-1) ?? "");
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/stores\/[^/]+$/) && request.method === "POST") {
+        const manage = await requirePlatform(env, current.context.userId, "manage_stores");
+        if (!manage.ok) return json({ error: manage.error }, manage.status);
+        const parsed = platformDecisionSchema.safeParse(await request.json().catch(() => ({})));
+        if (!parsed.success) return json({ error: "invalid_input" }, 400);
+        const storeId = url.pathname.split("/").at(-1) ?? "";
+        const decided = await decideStore(env, storeId, parsed.data.action, current.context.userId, parsed.data.reason);
+        if (decided.ok) {
+          const payload = (await decided.clone().json()) as { audit?: string; previous?: string };
+          await writeAudit(env, {
+            actor: current.context.userId,
+            action: payload.audit ?? `store_${parsed.data.action}`,
+            resourceType: "store",
+            resourceId: storeId,
+            ip,
+            ua: request.headers.get("user-agent") ?? undefined,
+          });
+        }
+        return decided;
+      }
+      if (url.pathname === "/api/mipede/v1/platform/admins" && request.method === "GET") {
+        return listAdmins(env);
+      }
+      if (url.pathname === "/api/mipede/v1/platform/admins/invites" && request.method === "POST") {
+        const inviteLimit = rateLimit(`invite-create:${current.context.userId}`);
+        if (inviteLimit) return inviteLimit;
+        const inviteGate = await requirePlatform(env, current.context.userId, "invite_admin");
+        if (!inviteGate.ok) return json({ error: inviteGate.error }, inviteGate.status);
+        const body = (await request.json().catch(() => ({}))) as { name?: string; email?: string; role?: string };
+        if (body.role && body.role !== "platform_admin") return json({ error: "forbidden_role" }, 403);
+        if (!body.name || !body.email) return json({ error: "invalid_input" }, 400);
+        const created = await createInvite(env, {
+          name: body.name,
+          email: body.email,
+          createdBy: current.context.userId,
+        });
+        if (created.ok) {
+          await writeAudit(env, {
+            actor: current.context.userId,
+            action: "platform_admin_invited",
+            resourceType: "platform_invite",
+            ip,
+            ua: request.headers.get("user-agent") ?? undefined,
+          });
+        }
+        return created;
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/admins\/invites\/[^/]+\/revoke$/) && request.method === "POST") {
+        const inviteGate = await requirePlatform(env, current.context.userId, "invite_admin");
+        if (!inviteGate.ok) return json({ error: inviteGate.error }, inviteGate.status);
+        const inviteId = url.pathname.split("/").at(-2) ?? "";
+        const revoked = await revokeInvite(env, inviteId);
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "platform_admin_invite_revoked",
+          resourceType: "platform_invite",
+          resourceId: inviteId,
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+        return revoked;
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/admins\/invites\/[^/]+\/renew$/) && request.method === "POST") {
+        const inviteGate = await requirePlatform(env, current.context.userId, "invite_admin");
+        if (!inviteGate.ok) return json({ error: inviteGate.error }, inviteGate.status);
+        return renewInvite(env, url.pathname.split("/").at(-2) ?? "", current.context.userId);
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/admins\/[^/]+\/suspend$/) && request.method === "POST") {
+        const adminGate = await requirePlatform(env, current.context.userId, "suspend_admin");
+        if (!adminGate.ok) return json({ error: adminGate.error }, adminGate.status);
+        const adminId = url.pathname.split("/").at(-2) ?? "";
+        const result = await setAdminStatus(env, adminId, "suspended");
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "platform_admin_suspended",
+          resourceType: "platform_admin",
+          resourceId: adminId,
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+        return result;
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/admins\/[^/]+\/reactivate$/) && request.method === "POST") {
+        const adminGate = await requirePlatform(env, current.context.userId, "suspend_admin");
+        if (!adminGate.ok) return json({ error: adminGate.error }, adminGate.status);
+        const adminId = url.pathname.split("/").at(-2) ?? "";
+        const result = await setAdminStatus(env, adminId, "active");
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "platform_admin_reactivated",
+          resourceType: "platform_admin",
+          resourceId: adminId,
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+        return result;
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/admins\/[^/]+\/remove$/) && request.method === "POST") {
+        const adminGate = await requirePlatform(env, current.context.userId, "remove_admin");
+        if (!adminGate.ok) return json({ error: adminGate.error }, adminGate.status);
+        const adminId = url.pathname.split("/").at(-2) ?? "";
+        const result = await removeAdmin(env, adminId, current.context.userId);
+        if (result.ok) {
+          await writeAudit(env, {
+            actor: current.context.userId,
+            action: "platform_admin_removed",
+            resourceType: "platform_admin",
+            resourceId: adminId,
+            ip,
+            ua: request.headers.get("user-agent") ?? undefined,
+          });
+        }
+        return result;
+      }
+      if (url.pathname === "/api/mipede/v1/platform/audit" && request.method === "GET") {
+        return listAudit(env);
+      }
+      return json({ error: "not_found" }, 404);
     }
 
     if (url.pathname === "/api/mipede/v1/authorize" && request.method === "POST") {

@@ -4,7 +4,7 @@ const ALLOWED_PREFIXES = [
   "/admin",
   "/gestor/",
   "/onboarding",
-  "/plataforma/estabelecimentos",
+  "/plataforma",
   "/auth/continuar",
 ] as const;
 
@@ -48,7 +48,7 @@ export function canonicalDestination(input: {
     onboardingStatus: string;
   } | null;
 }): string {
-  if (input.platformAdmin) return "/plataforma/estabelecimentos";
+  if (input.platformAdmin) return "/plataforma";
   if (!input.store) return "/onboarding/empresa";
   if (input.store.role === "operator") return `/gestor/${input.store.slug}`;
   if (input.store.status === "DRAFT") {

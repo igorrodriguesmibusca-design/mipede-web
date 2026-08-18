@@ -1,8 +1,9 @@
 export const STORE_ROLES = ["owner", "admin", "operator"] as const;
 export type StoreRole = (typeof STORE_ROLES)[number];
 
+export const PLATFORM_ROLES = ["platform_owner", "platform_admin"] as const;
+export type PlatformRole = (typeof PLATFORM_ROLES)[number];
 export const PLATFORM_ROLE = "platform_admin" as const;
-export type PlatformRole = typeof PLATFORM_ROLE;
 
 export const STORE_STATUS = [
   "DRAFT",
@@ -82,7 +83,11 @@ export function canDeleteOrganization(role: StoreRole): boolean {
 }
 
 export function canAccessPlatform(context: AuthContext): boolean {
-  return context.platformRole === PLATFORM_ROLE;
+  return context.platformRole === "platform_owner" || context.platformRole === "platform_admin";
+}
+
+export function isPlatformOwner(role: PlatformRole | null | undefined): boolean {
+  return role === "platform_owner";
 }
 
 export function resolveAuthorizedStore(
@@ -105,6 +110,8 @@ export function resolveAuthorizedStore(
 const FORBIDDEN_MASS_ASSIGN = [
   "role",
   "isPlatformAdmin",
+  "platformRole",
+  "platform_owner",
   "approvedAt",
   "approvedBy",
   "organizationId",
