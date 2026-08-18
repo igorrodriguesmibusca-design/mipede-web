@@ -57,3 +57,15 @@ Use clientes separados de staging e produção quando possível.
 7. Sem loja → onboarding. Com loja → admin/gestor. `platform_admin` → plataforma.
 
 Convites de equipe ficam desligados até existir um canal seguro de e-mail.
+
+## Vinculação com usuário existente
+
+Se já existir um usuário local com o mesmo e-mail (por exemplo, cadastro antigo por senha sem verificação):
+
+* o Google precisa devolver `email_verified = true`
+* o e-mail é comparado em minúsculas
+* o `userId` interno é reutilizado
+* só é criada a `account` do provedor `google`
+* loja, membership e papéis não são alterados
+
+`requireLocalEmailVerified` fica desligado porque esses usuários de teste ficaram com `emailVerified = 0` (Resend nunca enviou). `trustedProviders` não é usado, para o Better Auth continuar exigindo o e-mail verificado do Google.

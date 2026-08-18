@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
+import { AuthError } from "@/components/auth/auth-error";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { GoogleButton } from "@/components/auth/google-button";
 import { routes } from "@/lib/routes";
@@ -21,6 +23,9 @@ export default function LoginPage() {
         </div>
       }
     >
+      <Suspense>
+        <AuthError />
+      </Suspense>
       <GoogleButton />
     </AuthShell>
   );

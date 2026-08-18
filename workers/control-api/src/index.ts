@@ -214,6 +214,17 @@ function createAuth(env: ControlEnv) {
           },
         }
       : {},
+    account: {
+      accountLinking: {
+        enabled: true,
+        disableImplicitLinking: false,
+        allowDifferentEmails: false,
+        // Usuários de testes sem Resend ficaram com emailVerified=0.
+        // O Google ainda precisa devolver email_verified; sem trustedProviders
+        // o Better Auth recusa o vínculo se o Google não confirmar o e-mail.
+        requireLocalEmailVerified: false,
+      },
+    },
     user: {
       additionalFields: {
         whatsapp: { type: "string", required: false },
