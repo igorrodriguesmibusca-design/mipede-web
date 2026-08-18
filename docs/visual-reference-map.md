@@ -63,6 +63,20 @@ O desktop reutiliza os mesmos componentes do mobile, com grade e cabeçalho adap
 
 ## Link da bio
 
-A pasta `Telas Link na Bio` estava vazia no momento da implementação.
+A pasta `Telas Link na Bio` estava vazia no momento da implementação inicial.
 
-A rota `/bio/pizzaria-imperial` é uma versão provisória alinhada à identidade visual do MiPede e será refinada quando as referências forem enviadas.
+A rota `/bio/pizzaria-imperial` mantém a versão mobile aprovada e ganhou uma composição exclusiva para desktop a partir de 1024px.
+
+## Evoluções administrativas (Prompt 04)
+
+| Recurso | Rota |
+| --- | --- |
+| Desempenho — Vendas | `/admin/desempenho` |
+| Desempenho — Cardápio | `/admin/desempenho/cardapio` |
+| Desempenho — Cancelamentos | `/admin/desempenho/cancelamentos` |
+| Nova categoria | `/admin/cardapio/categorias` (modal) |
+| Novo produto | `/admin/cardapio/produtos/novo` |
+| Complementos | `/admin/cardapio/complementos` |
+| Pedidos Kanban | `/admin/pedidos` |
+| Cupons | `/admin/marketing/promocoes-cupons` |
+| Detalhe do cupom | `/admin/marketing/cupons/[codigo]` |

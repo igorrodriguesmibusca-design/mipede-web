@@ -22,13 +22,25 @@ const storefront = [
   { href: routes.store.orderFull("183720"), label: "Detalhes completos do pedido" },
 ];
 
+const bio = [
+  { href: routes.bio, label: "Link na Bio — mobile" },
+  { href: routes.bio, label: "Link na Bio — desktop (abrir acima de 1024px)" },
+];
+
 const admin = [
-  { href: routes.admin.performance, label: "Desempenho" },
-  { href: routes.admin.orders, label: "Pedidos" },
+  { href: routes.admin.performance, label: "Desempenho — Vendas" },
+  { href: routes.admin.performanceMenu, label: "Desempenho — Cardápio" },
+  { href: routes.admin.performanceCancellations, label: "Desempenho — Cancelamentos" },
   { href: routes.admin.categories, label: "Categorias" },
+  { href: routes.admin.categories, label: "Nova categoria (abre modal na listagem)" },
   { href: routes.admin.products, label: "Produtos" },
+  { href: routes.admin.productNew, label: "Novo produto" },
   { href: routes.admin.addons, label: "Complementos" },
-  { href: routes.admin.coupons, label: "Promoções e Cupons" },
+  { href: routes.admin.orders, label: "Pedidos Kanban" },
+  { href: routes.admin.coupons, label: "Cupons" },
+  { href: routes.admin.coupon("fretegratis"), label: "Detalhes FRETEGRATIS" },
+  { href: routes.admin.coupon("bemvindo10"), label: "Detalhes BEMVINDO10" },
+  { href: routes.admin.coupon("menos20"), label: "Detalhes MENOS20" },
   { href: routes.admin.customers, label: "Clientes" },
   { href: routes.admin.store, label: "Configuração da Loja" },
   { href: routes.admin.delivery, label: "Entrega e Pagamento" },
@@ -51,8 +63,8 @@ export default function PreviewPage() {
           <Section title="Cardápio do consumidor" items={storefront} />
           <Section
             title="Link da bio"
-            items={[{ href: routes.bio, label: "Link da bio — Pizzaria Imperial" }]}
-            note="Versão provisória: a pasta de referências estava vazia."
+            items={bio}
+            note="A versão mobile permanece igual. A composição desktop aparece a partir de 1024px."
           />
           <Section title="Painel administrativo" items={admin} />
         </div>
@@ -76,7 +88,7 @@ function Section({
       {note ? <p className="mb-3 text-xs text-subtle">{note}</p> : null}
       <ul className="space-y-1.5">
         {items.map((item) => (
-          <li key={item.href}>
+          <li key={`${item.href}-${item.label}`}>
             <Link href={item.href} className="text-sm font-medium text-brand hover:underline">
               {item.label}
             </Link>

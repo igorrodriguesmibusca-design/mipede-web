@@ -72,19 +72,25 @@ Não é necessário criar arquivo `.env`.
 
 | Rota | Observação |
 | --- | --- |
-| `/bio/pizzaria-imperial` | **Provisória.** A pasta de referências estava vazia e a tela será refinada quando as imagens forem enviadas. |
+| `/bio/pizzaria-imperial` | Mobile preservado. Desktop a partir de 1024px com carrossel e destaques. |
 
 ### Painel administrativo
 
 | Rota | Tela |
 | --- | --- |
 | `/admin` | Redireciona para Desempenho |
-| `/admin/desempenho` | Desempenho |
-| `/admin/pedidos` | Pedidos |
-| `/admin/cardapio/categorias` | Categorias |
+| `/admin/desempenho` | Desempenho — Vendas |
+| `/admin/desempenho/cardapio` | Desempenho — Cardápio |
+| `/admin/desempenho/cancelamentos` | Desempenho — Cancelamentos |
+| `/admin/pedidos` | Pedidos (Kanban) |
+| `/admin/cardapio/categorias` | Categorias (modal Nova categoria) |
 | `/admin/cardapio/produtos` | Produtos |
+| `/admin/cardapio/produtos/novo` | Novo produto |
 | `/admin/cardapio/complementos` | Complementos |
 | `/admin/marketing/promocoes-cupons` | Promoções e Cupons |
+| `/admin/marketing/cupons/fretegratis` | Detalhe FRETEGRATIS |
+| `/admin/marketing/cupons/bemvindo10` | Detalhe BEMVINDO10 |
+| `/admin/marketing/cupons/menos20` | Detalhe MENOS20 |
 | `/admin/clientes` | Clientes |
 | `/admin/configuracoes/loja` | Configuração da Loja |
 | `/admin/configuracoes/entrega-pagamento` | Entrega e Pagamento |
@@ -94,4 +100,6 @@ Não é necessário criar arquivo `.env`.
 
 - O MiPede não é um marketplace.
 - Pagamentos no protótipo são apenas visuais e acontecem diretamente ao estabelecimento.
+- Interações de cadastro, Kanban e cupons usam estado local e voltam ao mock ao recarregar.
 - O mapa de referências visuais está em `docs/visual-reference-map.md`.
+- As regras de analytics futuro estão em `docs/analytics-event-map.md`.
