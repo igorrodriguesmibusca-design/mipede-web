@@ -77,6 +77,7 @@ export const routes = {
     coupons: "/admin/marketing/promocoes-cupons",
     coupon: (code: string) => `/admin/marketing/cupons/${code}`,
     tracking: "/admin/marketing/links-rastreamento",
+    banners: "/admin/marketing/banners",
     customers: "/admin/clientes",
     store: "/admin/configuracoes/loja",
     delivery: "/admin/configuracoes/entrega-pagamento",

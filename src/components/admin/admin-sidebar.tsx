@@ -8,6 +8,7 @@ import {
   Boxes,
   ChevronDown,
   FolderTree,
+  Image,
   Link2,
   Megaphone,
   Settings,
@@ -65,6 +66,7 @@ const sections: NavSection[] = [
     icon: Megaphone,
     items: [
       { href: routes.admin.coupons, label: "Promoções e Cupons", icon: Tags },
+      { href: routes.admin.banners, label: "Banners do Cardápio", icon: Image },
       { href: routes.admin.tracking, label: "Links de Rastreamento", icon: Link2 },
     ],
   },

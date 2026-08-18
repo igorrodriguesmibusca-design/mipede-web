@@ -151,6 +151,11 @@ const AUDIT_EVENT_MAP: Record<string, string> = {
   stores_provisioned: "Estrutura das lojas provisionada",
   complement_group_created: "Grupo de complementos criado",
   complement_group_updated: "Regras do grupo de complementos atualizadas",
+  store_identity_updated: "Identidade visual da loja atualizada",
+  banner_created: "Banner do cardápio criado",
+  banner_updated: "Banner do cardápio atualizado",
+  banner_reordered: "Ordem dos banners atualizada",
+  banner_archived: "Banner do cardápio arquivado",
 };
 
 export function auditEventLabel(action: string | null | undefined): string {

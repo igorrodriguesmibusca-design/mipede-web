@@ -15,6 +15,8 @@ O `store_id` nunca autoriza acesso se vier do navegador. O Worker resolve a loja
 
 O carrinho público é temporário e fica no navegador, separado por loja. Preços enviados pelo cliente não são confiáveis: ao criar um pedido no futuro, o servidor deve recalcular o total com os preços atuais do APP_DB.
 
+Agendamento de banners usa o fuso `America/Bahia` da loja. Capa desktop e mobile são independentes; o foco é salvo como `object-position`. Banners em rascunho ou pausados nunca saem na URL pública.
+
 ## Onboarding
 
 O cadastro público reutiliza a loja existente do usuário. Só um estabelecimento `public_onboarding` ativo por proprietário. Novas lojas no futuro exigem um fluxo explícito “Adicionar estabelecimento”.
