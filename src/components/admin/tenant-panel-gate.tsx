@@ -55,6 +55,7 @@ export function TenantPanelGate({
   const operatorOnAdmin =
     tenant.mode === "live" &&
     tenant.platformRole !== "platform_admin" &&
+    tenant.platformRole !== "platform_owner" &&
     tenant.store?.role === "operator" &&
     area === "admin";
 

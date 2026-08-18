@@ -8,7 +8,7 @@ import { getTenantView } from "@/server/session";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const tenant = await getTenantView();
-  if (tenant.mode === "live" && !tenant.store && tenant.platformRole !== "platform_admin") {
+  if (tenant.mode === "live" && !tenant.store && tenant.platformRole !== "platform_admin" && tenant.platformRole !== "platform_owner") {
     redirect(routes.onboarding.company);
   }
   return (

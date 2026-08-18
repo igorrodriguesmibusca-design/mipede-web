@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 
 import { BFF_SECRET_HEADER, bffSharedSecret } from "./bff";
 import { allowVisualDemo, controlApiUrl, SESSION_COOKIE_NAMES } from "./config";
-import type { StoreRole, StoreStatus } from "./roles";
+import type { PlatformRole, StoreRole, StoreStatus } from "./roles";
 
 export type TenantView =
   | { mode: "demo" }
@@ -10,7 +10,8 @@ export type TenantView =
   | {
       mode: "live";
       user: { id: string; name: string; email: string; emailVerified: boolean };
-      platformRole: "platform_admin" | null;
+      platformRole: PlatformRole | null;
+      canBootstrap?: boolean;
       store: {
         organizationId: string;
         storeId: string;
@@ -24,7 +25,8 @@ export type TenantView =
 
 type MeResponse = {
   user?: { id: string; name: string; email: string; emailVerified: boolean };
-  platformRole?: "platform_admin" | null;
+  platformRole?: PlatformRole | null;
+  canBootstrap?: boolean;
   store?: TenantView extends { mode: "live" } ? TenantView["store"] : never;
 };
 
@@ -57,6 +59,7 @@ export async function getTenantView(): Promise<TenantView> {
             mode: "live",
             user: payload.user,
             platformRole: payload.platformRole ?? null,
+            canBootstrap: payload.canBootstrap,
             store: payload.store ?? null,
           };
         }

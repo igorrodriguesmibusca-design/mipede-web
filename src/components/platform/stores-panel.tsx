@@ -79,10 +79,12 @@ export function PlatformStoresPanel() {
             stores.map((store) => (
               <tr key={store.id} className="border-b border-zinc-50">
                 <td className="px-4 py-3 font-medium">
-                  {store.name}
+                  <a href={`/plataforma/estabelecimentos/${store.id}`} className="hover:underline">
+                    {store.name}
+                  </a>
                   <div className="text-xs text-subtle">{store.slug}</div>
                 </td>
-                <td className="px-4 py-3">{store.owner_name ?? store.owner_email ?? "—"}</td>
+                <td className="px-4 py-3">{store.owner_name ?? "—"}</td>
                 <td className="px-4 py-3">{new Date(store.created_at).toLocaleDateString("pt-BR")}</td>
                 <td className="px-4 py-3">{store.onboarding_status}</td>
                 <td className="px-4 py-3">{store.status}</td>
