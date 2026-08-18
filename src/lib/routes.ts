@@ -11,6 +11,7 @@ export const routes = {
     identify: `${STORE_BASE}/identificacao`,
     identifyFilled: `${STORE_BASE}/identificacao/preenchido`,
     identifyError: `${STORE_BASE}/identificacao/erro`,
+    identifyRecognized: `${STORE_BASE}/identificacao/reconhecido`,
     address: `${STORE_BASE}/endereco`,
     checkout: `${STORE_BASE}/checkout`,
     checkoutAddress: `${STORE_BASE}/checkout/endereco`,
