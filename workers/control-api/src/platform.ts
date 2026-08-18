@@ -142,7 +142,7 @@ export async function dashboard(env: PlatformEnv) {
 export async function listStores(env: PlatformEnv) {
   const rows = await env.DB.prepare(
     `SELECT id, name, slug, status, onboarding_status, provisioning_status, city, created_at, owner_user_id
-     FROM stores ORDER BY created_at DESC`,
+     FROM stores WHERE archived_at IS NULL ORDER BY created_at DESC`,
   ).all();
   return json({ stores: rows.results ?? [] });
 }
@@ -173,6 +173,9 @@ export async function decideStore(
   const previous = await env.DB.prepare(`SELECT status FROM stores WHERE id = ?`).bind(storeId).first<{ status: string }>();
   if (!previous) return json({ error: "not_found" }, 404);
   const status = storeStatusAfterDecision(action);
+  if (previous.status === status) {
+    return json({ ok: true, status, previous: previous.status, reused: true, audit: auditActionForStore(action) });
+  }
   await env.DB.prepare(
     `UPDATE stores SET status = ?, approved_at = ?, approved_by = ?, rejection_reason = ?, updated_at = ? WHERE id = ?`,
   )

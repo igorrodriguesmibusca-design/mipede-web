@@ -7,6 +7,7 @@ import { isEmailPasswordAuthEnabled, isGoogleAuthEnabled, isPasswordAuthPath, PA
 import { authorizePlatform, authorizeStoreAccess, rejectRoleEscalation } from "../../../src/server/authorize";
 import { MemoryRateLimiter } from "../../../src/server/rate-limit";
 import { resolvePostAuthDestination } from "../../../src/server/redirects";
+import { backfillActiveStores, handleAppApi, provisionStore } from "./app-api";
 import {
   acceptInvite,
   bootstrapOwner,
@@ -25,6 +26,11 @@ import {
   revokeInvite,
   setAdminStatus,
 } from "./platform";
+import {
+  approvalAlreadyDone,
+  findReusablePublicStore,
+  type ExistingOnboardingStore,
+} from "../../../src/server/onboarding-store";
 import { PRIVACY_VERSION, TERMS_INTENT_COOKIE, TERMS_INTENT_MAX_AGE, TERMS_VERSION } from "../../../src/server/terms";
 import {
   canAccessPlatform,
@@ -47,6 +53,8 @@ import {
 
 export interface ControlEnv {
   DB: D1Database;
+  APP_DB?: D1Database;
+  MEDIA?: R2Bucket;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
   APP_PUBLIC_URL?: string;
@@ -280,8 +288,9 @@ async function loadContext(env: ControlEnv, userId: string, email: string, verif
   const members = await env.DB.prepare(
     `SELECT m.organizationId, m.role, s.id as storeId, s.slug as storeSlug, s.status as storeStatus
      FROM member m
-     LEFT JOIN stores s ON s.organization_id = m.organizationId
-     WHERE m.userId = ?`,
+     INNER JOIN stores s ON s.organization_id = m.organizationId
+     WHERE m.userId = ? AND s.archived_at IS NULL
+     ORDER BY CASE s.status WHEN 'ACTIVE' THEN 0 WHEN 'PENDING_REVIEW' THEN 1 WHEN 'DRAFT' THEN 2 ELSE 3 END, s.created_at ASC`,
   )
     .bind(userId)
     .all<{
@@ -632,6 +641,19 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/mipede/v1/onboarding/current" && request.method === "GET") {
+      const current = await sessionContext(request, env);
+      if (!current) return json({ error: "unauthenticated" }, 401);
+      const store = current.context.memberships[0]
+        ? await env.DB.prepare(
+            `SELECT id, name, slug, status, onboarding_status, city, state, whatsapp, business_type, cnpj FROM stores WHERE id = ? AND archived_at IS NULL`,
+          )
+            .bind(current.context.memberships[0].storeId)
+            .first()
+        : null;
+      return json({ store });
+    }
+
     if (url.pathname.startsWith("/api/mipede/v1/onboarding/") && request.method === "POST") {
       const current = await sessionContext(request, env);
       if (!current) return json({ error: "unauthenticated" }, 401);
@@ -657,39 +679,98 @@ export default {
         const parsed = onboardingCompanySchema.safeParse(body);
         if (!parsed.success) return json({ error: "invalid_input", issues: parsed.error.flatten() }, 400);
         if (!isValidSlug(parsed.data.slug)) return json({ error: "reserved_or_invalid_slug" }, 400);
-        const existing = await env.DB.prepare(`SELECT id FROM stores WHERE slug = ?`).bind(parsed.data.slug).first();
-        if (existing) return json({ error: "slug_taken" }, 409);
+
+        const owned = await env.DB.prepare(
+          `SELECT id, organization_id as organizationId, slug, status, archived_at as archivedAt, COALESCE(created_via, 'public_onboarding') as createdVia
+           FROM stores WHERE owner_user_id = ?`,
+        )
+          .bind(current.context.userId)
+          .all<ExistingOnboardingStore>();
+        const reusable = findReusablePublicStore(owned.results ?? []);
+        const slugOwner = await env.DB.prepare(`SELECT id, owner_user_id FROM stores WHERE slug = ? AND archived_at IS NULL`)
+          .bind(parsed.data.slug)
+          .first<{ id: string; owner_user_id: string }>();
+        if (slugOwner && slugOwner.id !== reusable?.id) return json({ error: "slug_taken" }, 409);
+
+        if (reusable) {
+          if (reusable.status === "DRAFT") {
+            await env.DB.prepare(
+              `UPDATE stores SET name = ?, slug = ?, business_type = ?, whatsapp = ?, city = ?, state = ?, cnpj = ?, onboarding_status = 'company', updated_at = ?
+               WHERE id = ? AND owner_user_id = ? AND archived_at IS NULL`,
+            )
+              .bind(
+                parsed.data.name,
+                parsed.data.slug,
+                parsed.data.segment,
+                parsed.data.whatsapp,
+                parsed.data.city,
+                parsed.data.state,
+                parsed.data.cnpj ?? null,
+                Date.now(),
+                reusable.id,
+                current.context.userId,
+              )
+              .run();
+            await env.DB.prepare(`UPDATE organization SET name = ?, slug = ? WHERE id = ?`)
+              .bind(parsed.data.name, parsed.data.slug, reusable.organizationId)
+              .run();
+          }
+          return json({
+            ok: true,
+            reused: true,
+            organizationId: reusable.organizationId,
+            storeId: reusable.id,
+            slug: reusable.status === "DRAFT" ? parsed.data.slug : reusable.slug,
+          });
+        }
 
         const organizationId = crypto.randomUUID();
         const storeId = crypto.randomUUID();
         const now = Date.now();
-        await env.DB.prepare(
-          `INSERT INTO organization (id, name, slug, createdAt, metadata) VALUES (?, ?, ?, ?, ?)`,
-        )
-          .bind(organizationId, parsed.data.name, parsed.data.slug, now, null)
-          .run();
-        await env.DB.prepare(`INSERT INTO member (id, organizationId, userId, role, createdAt) VALUES (?, ?, ?, ?, ?)`)
-          .bind(crypto.randomUUID(), organizationId, current.context.userId, "owner", now)
-          .run();
-        await env.DB.prepare(
-          `INSERT INTO stores (id, organization_id, name, slug, status, onboarding_status, provisioning_status, owner_user_id, business_type, whatsapp, city, state, cnpj, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'DRAFT', 'company', 'NOT_STARTED', ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-          .bind(
-            storeId,
-            organizationId,
-            parsed.data.name,
-            parsed.data.slug,
-            current.context.userId,
-            parsed.data.segment,
-            parsed.data.whatsapp,
-            parsed.data.city,
-            parsed.data.state,
-            parsed.data.cnpj ?? null,
-            now,
-            now,
+        try {
+          await env.DB.prepare(
+            `INSERT INTO organization (id, name, slug, createdAt, metadata) VALUES (?, ?, ?, ?, ?)`,
           )
-          .run();
+            .bind(organizationId, parsed.data.name, parsed.data.slug, now, null)
+            .run();
+          await env.DB.prepare(`INSERT INTO member (id, organizationId, userId, role, createdAt) VALUES (?, ?, ?, ?, ?)`)
+            .bind(crypto.randomUUID(), organizationId, current.context.userId, "owner", now)
+            .run();
+          await env.DB.prepare(
+            `INSERT INTO stores (id, organization_id, name, slug, status, onboarding_status, provisioning_status, owner_user_id, business_type, whatsapp, city, state, cnpj, created_at, updated_at, created_via)
+             VALUES (?, ?, ?, ?, 'DRAFT', 'company', 'NOT_STARTED', ?, ?, ?, ?, ?, ?, ?, ?, 'public_onboarding')`,
+          )
+            .bind(
+              storeId,
+              organizationId,
+              parsed.data.name,
+              parsed.data.slug,
+              current.context.userId,
+              parsed.data.segment,
+              parsed.data.whatsapp,
+              parsed.data.city,
+              parsed.data.state,
+              parsed.data.cnpj ?? null,
+              now,
+              now,
+            )
+            .run();
+        } catch {
+          const fallback = findReusablePublicStore(
+            (
+              await env.DB.prepare(
+                `SELECT id, organization_id as organizationId, slug, status, archived_at as archivedAt, COALESCE(created_via, 'public_onboarding') as createdVia
+                 FROM stores WHERE owner_user_id = ?`,
+              )
+                .bind(current.context.userId)
+                .all<ExistingOnboardingStore>()
+            ).results ?? [],
+          );
+          if (fallback) {
+            return json({ ok: true, reused: true, organizationId: fallback.organizationId, storeId: fallback.id, slug: fallback.slug });
+          }
+          return json({ error: "onboarding_conflict" }, 409);
+        }
         await writeAudit(env, {
           actor: current.context.userId,
           organizationId,
@@ -700,7 +781,7 @@ export default {
           ip,
           ua: request.headers.get("user-agent") ?? undefined,
         });
-        return json({ ok: true, organizationId, storeId, slug: parsed.data.slug });
+        return json({ ok: true, reused: false, organizationId, storeId, slug: parsed.data.slug });
       }
 
       const membership = current.context.memberships[0];
@@ -741,6 +822,12 @@ export default {
       }
 
       if (step === "submit") {
+        const currentStore = await env.DB.prepare(`SELECT status FROM stores WHERE id = ? AND organization_id = ?`)
+          .bind(membership.storeId, membership.organizationId)
+          .first<{ status: string }>();
+        if (currentStore && (currentStore.status === "PENDING_REVIEW" || approvalAlreadyDone(currentStore.status))) {
+          return json({ ok: true, reused: true, next: "/admin/desempenho" });
+        }
         await env.DB.prepare(
           `UPDATE stores SET status = 'PENDING_REVIEW', onboarding_status = 'submitted', updated_at = ? WHERE id = ? AND organization_id = ? AND status = 'DRAFT'`,
         )
@@ -835,6 +922,9 @@ export default {
         const storeId = url.pathname.split("/").at(-1) ?? "";
         const decided = await decideStore(env, storeId, parsed.data.action, current.context.userId, parsed.data.reason);
         if (decided.ok) {
+          if (parsed.data.action === "approve") {
+            await provisionStore(env, storeId);
+          }
           const payload = (await decided.clone().json()) as { audit?: string; previous?: string };
           await writeAudit(env, {
             actor: current.context.userId,
@@ -944,8 +1034,55 @@ export default {
       if (url.pathname === "/api/mipede/v1/platform/audit" && request.method === "GET") {
         return listAudit(env);
       }
+      if (url.pathname === "/api/mipede/v1/platform/provision" && request.method === "POST") {
+        const manage = await requirePlatform(env, current.context.userId, "manage_stores");
+        if (!manage.ok) return json({ error: manage.error }, manage.status);
+        const results = await backfillActiveStores(env);
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "stores_provisioned",
+          resourceType: "platform",
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+        return json({ ok: true, count: results.length, results });
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/stores\/[^/]+\/provision$/) && request.method === "POST") {
+        const manage = await requirePlatform(env, current.context.userId, "manage_stores");
+        if (!manage.ok) return json({ error: manage.error }, manage.status);
+        const storeId = url.pathname.split("/").at(-2) ?? "";
+        const result = await provisionStore(env, storeId);
+        return json(result);
+      }
+      if (url.pathname.match(/^\/api\/mipede\/v1\/platform\/stores\/[^/]+\/archive$/) && request.method === "POST") {
+        const manage = await requirePlatform(env, current.context.userId, "manage_stores");
+        if (!manage.ok) return json({ error: manage.error }, manage.status);
+        const storeId = url.pathname.split("/").at(-2) ?? "";
+        const body = (await request.json().catch(() => ({}))) as { reason?: string };
+        const target = await env.DB.prepare(`SELECT id, status FROM stores WHERE id = ?`).bind(storeId).first<{ id: string; status: string }>();
+        if (!target) return json({ error: "not_found" }, 404);
+        if (target.status === "ACTIVE") return json({ error: "cannot_archive_active" }, 403);
+        await env.DB.prepare(
+          `UPDATE stores SET archived_at = ?, archive_reason = ?, updated_at = ? WHERE id = ? AND status != 'ACTIVE'`,
+        )
+          .bind(Date.now(), body.reason ?? "duplicate_onboarding", Date.now(), storeId)
+          .run();
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "store_archived_duplicate",
+          resourceType: "store",
+          resourceId: storeId,
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+        return json({ ok: true });
+      }
       return json({ error: "not_found" }, 404);
     }
+
+    const currentForApp = await sessionContext(request, env);
+    const appResponse = await handleAppApi(request, env, currentForApp?.context ?? null, url);
+    if (appResponse) return appResponse;
 
     if (url.pathname === "/api/mipede/v1/authorize" && request.method === "POST") {
       const current = await sessionContext(request, env);

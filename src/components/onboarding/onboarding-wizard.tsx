@@ -102,13 +102,16 @@ export function CompanyStep() {
   const router = useRouter();
   const [draft, setDraft] = useState<Draft>(loadDraft);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   async function next() {
+    if (pending) return;
     saveDraft(draft);
     if (!isValidSlug(draft.slug)) {
       setError("Este slug não pode ser usado.");
       return;
     }
+    setPending(true);
     const response = await fetch("/api/mipede/v1/onboarding/company", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -130,7 +133,12 @@ export function CompanyStep() {
     }
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      setError(payload.error === "reserved_or_invalid_slug" ? "Este slug não pode ser usado." : "Revise os dados da empresa.");
+      setPending(false);
+      setError(
+        payload.error === "reserved_or_invalid_slug" || payload.error === "slug_taken"
+          ? "Este slug não pode ser usado."
+          : "Revise os dados da empresa.",
+      );
       return;
     }
     router.push(routes.onboarding.operation);
@@ -166,8 +174,8 @@ export function CompanyStep() {
           <Input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value.toLowerCase() })} />
         </Field>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <Button type="button" className="h-11 rounded-xl" onClick={() => void next()}>
-          Continuar
+        <Button type="button" className="h-11 rounded-xl" disabled={pending} onClick={() => void next()}>
+          {pending ? "Salvando..." : "Continuar"}
         </Button>
       </div>
     </OnboardingShell>
