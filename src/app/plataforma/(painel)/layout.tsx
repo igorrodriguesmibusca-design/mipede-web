@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { PlatformShell } from "@/components/platform/platform-shell";
+import { TenantProvider } from "@/lib/tenant-context";
 import { routes } from "@/lib/routes";
 import { BFF_SECRET_HEADER, bffSharedSecret } from "@/server/bff";
 import { controlApiUrl } from "@/server/config";
@@ -42,5 +43,11 @@ export default async function PlatformConsoleLayout({ children }: { children: Re
     );
   }
 
-  return <PlatformShell role={tenant.platformRole}>{children}</PlatformShell>;
+  return (
+    <TenantProvider value={tenant}>
+      <PlatformShell role={tenant.platformRole} userName={tenant.user.name}>
+        {children}
+      </PlatformShell>
+    </TenantProvider>
+  );
 }
