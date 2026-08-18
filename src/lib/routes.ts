@@ -1,0 +1,37 @@
+export const STORE_BASE = "/loja/pizzaria-imperial";
+
+export const routes = {
+  preview: "/preview",
+  store: {
+    onboarding: `${STORE_BASE}/onboarding`,
+    home: STORE_BASE,
+    product: (id: string) => `${STORE_BASE}/produto/${id}`,
+    cart: `${STORE_BASE}/carrinho`,
+    cartEmpty: `${STORE_BASE}/carrinho/vazio`,
+    identify: `${STORE_BASE}/identificacao`,
+    identifyFilled: `${STORE_BASE}/identificacao/preenchido`,
+    identifyError: `${STORE_BASE}/identificacao/erro`,
+    address: `${STORE_BASE}/endereco`,
+    checkout: `${STORE_BASE}/checkout`,
+    checkoutAddress: `${STORE_BASE}/checkout/endereco`,
+    coupons: `${STORE_BASE}/cupons`,
+    orders: `${STORE_BASE}/pedidos`,
+    ordersEmpty: `${STORE_BASE}/pedidos/vazio`,
+    order: (id: string) => `${STORE_BASE}/pedidos/${id}`,
+    orderFull: (id: string) => `${STORE_BASE}/pedidos/${id}/completo`,
+  },
+  bio: "/bio/pizzaria-imperial",
+  admin: {
+    root: "/admin",
+    performance: "/admin/desempenho",
+    orders: "/admin/pedidos",
+    categories: "/admin/cardapio/categorias",
+    products: "/admin/cardapio/produtos",
+    addons: "/admin/cardapio/complementos",
+    coupons: "/admin/marketing/promocoes-cupons",
+    tracking: "/admin/marketing/links-rastreamento",
+    customers: "/admin/clientes",
+    store: "/admin/configuracoes/loja",
+    delivery: "/admin/configuracoes/entrega-pagamento",
+  },
+} as const;
