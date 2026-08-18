@@ -9,6 +9,17 @@ import {
   sniffImageMime,
 } from "../../../src/server/catalog-policy";
 import { groupHasEnoughOptions, validateComplementRules } from "../../../src/lib/complement-rules";
+import {
+  bannerOptions,
+  createBanner,
+  duplicateBanner,
+  listBanners,
+  mapIdentity,
+  publicBanners,
+  reorderBanners,
+  updateBanner,
+  updateIdentity,
+} from "./banners";
 import { reaisToCents, slugifyName } from "../../../src/server/onboarding-store";
 import {
   categoryWriteSchema,
@@ -305,6 +316,50 @@ export async function handleAppApi(
   if (path.match(/^\/api\/mipede\/v1\/catalog\/coupons\/[^/]+\/archive$/) && request.method === "POST") {
     if (!requireWrite(context, "coupons")) return friendly("forbidden", 403);
     return archiveRow(db, "coupons", member.storeId, path.split("/").at(-2) ?? "");
+  }
+
+  if (path === "/api/mipede/v1/settings/identity" && request.method === "PUT") {
+    if (!requireWrite(context, "settings")) return friendly("forbidden", 403);
+    const updated = await updateIdentity(db, member.storeId, await readBody(request));
+    if (updated.ok) await logCatalogAudit(env, context.userId, member.storeId, "store_identity_updated");
+    return updated;
+  }
+  if (path === "/api/mipede/v1/catalog/banners/options" && request.method === "GET") {
+    return bannerOptions(db, member.storeId);
+  }
+  if (path === "/api/mipede/v1/catalog/banners") {
+    if (request.method === "GET") return listBanners(db, member.storeId, member.storeSlug);
+    if (request.method === "POST") {
+      if (!requireWrite(context, "settings")) return friendly("forbidden", 403);
+      const created = await createBanner(db, member.storeId, member.storeSlug, await readBody(request));
+      if (created.ok) await logCatalogAudit(env, context.userId, member.storeId, "banner_created");
+      return created;
+    }
+  }
+  const bannerMatch = path.match(/^\/api\/mipede\/v1\/catalog\/banners\/([^/]+)$/);
+  if (bannerMatch && request.method === "PATCH") {
+    if (!requireWrite(context, "settings")) return friendly("forbidden", 403);
+    const updated = await updateBanner(db, member.storeId, member.storeSlug, bannerMatch[1], await readBody(request));
+    if (updated.ok) await logCatalogAudit(env, context.userId, member.storeId, "banner_updated");
+    return updated;
+  }
+  if (path === "/api/mipede/v1/catalog/banners/reorder" && request.method === "POST") {
+    if (!requireWrite(context, "settings")) return friendly("forbidden", 403);
+    const body = await readBody(request);
+    const ids = Array.isArray(body.ids) ? body.ids.filter((item): item is string => typeof item === "string") : [];
+    const reordered = await reorderBanners(db, member.storeId, ids);
+    if (reordered.ok) await logCatalogAudit(env, context.userId, member.storeId, "banner_reordered");
+    return reordered;
+  }
+  if (path.match(/^\/api\/mipede\/v1\/catalog\/banners\/[^/]+\/duplicate$/) && request.method === "POST") {
+    if (!requireWrite(context, "settings")) return friendly("forbidden", 403);
+    return duplicateBanner(db, member.storeId, path.split("/").at(-2) ?? "");
+  }
+  if (path.match(/^\/api\/mipede\/v1\/catalog\/banners\/[^/]+\/archive$/) && request.method === "POST") {
+    if (!requireWrite(context, "settings")) return friendly("forbidden", 403);
+    const archived = await archiveRow(db, "storefront_banners", member.storeId, path.split("/").at(-2) ?? "");
+    if (archived.ok) await logCatalogAudit(env, context.userId, member.storeId, "banner_archived");
+    return archived;
   }
 
   if (path === "/api/mipede/v1/settings") {
@@ -773,8 +828,13 @@ async function updateCoupon(db: D1Database, storeId: string, id: string, body: R
 }
 
 async function getSettings(db: D1Database, storeId: string, fallbackSlug: string, status: string) {
-  const row = await db.prepare(`SELECT * FROM store_settings WHERE store_id = ?`).bind(storeId).first();
-  return json({ settings: row ?? { store_id: storeId, slug: fallbackSlug }, publicHref: `/loja/${(row as { slug?: string } | null)?.slug ?? fallbackSlug}`, status });
+  const row = await db.prepare(`SELECT * FROM store_settings WHERE store_id = ?`).bind(storeId).first<Record<string, unknown>>();
+  return json({
+    settings: row ?? { store_id: storeId, slug: fallbackSlug },
+    identity: mapIdentity(storeId, row),
+    publicHref: `/loja/${(row?.slug as string | undefined) ?? fallbackSlug}`,
+    status,
+  });
 }
 
 async function updateSettings(db: D1Database, storeId: string, body: Record<string, unknown>) {
@@ -920,7 +980,7 @@ async function performance(db: D1Database, storeId: string) {
 }
 
 async function archiveRow(db: D1Database, table: string, storeId: string, id: string) {
-  const allowed = new Set(["categories", "products", "complement_groups", "complement_options", "coupons", "tracking_links"]);
+  const allowed = new Set(["categories", "products", "complement_groups", "complement_options", "coupons", "tracking_links", "storefront_banners"]);
   if (!allowed.has(table) || !id) return friendly("not_found", 404);
   const result = await db.prepare(`UPDATE ${table} SET archived_at = ?, updated_at = ? WHERE id = ? AND store_id = ? AND archived_at IS NULL`).bind(Date.now(), Date.now(), id, storeId).run();
   if (!result.meta.changes) return friendly("not_found", 404);
@@ -940,7 +1000,7 @@ async function uploadMedia(env: AppEnv, storeId: string, request: Request) {
   const key = `${storeId}/${id}`;
   await env.MEDIA.put(key, bytes, { httpMetadata: { contentType: mime } });
   await env.APP_DB.prepare(`INSERT INTO media_objects (id, store_id, object_key, mime, bytes, created_at) VALUES (?, ?, ?, ?, ?, ?)`).bind(id, storeId, key, mime, bytes.byteLength, Date.now()).run();
-  return json({ ok: true, key, url: `/api/mipede/v1/media/${storeId}/${id}` });
+  return json({ ok: true, id, key, url: `/api/mipede/v1/media/${storeId}/${id}` });
 }
 
 async function serveMedia(env: AppEnv, path: string) {
@@ -1027,10 +1087,10 @@ async function publicMenu(env: AppEnv, slug: string, previewContext: AuthContext
       state: settings?.state ?? null,
       minOrderCents: settings?.min_order_cents ?? 0,
       isOpen: settings?.is_open === 1,
-      logoUrl: settings?.logo_key ? `/api/mipede/v1/media/${store.id}/${String(settings.logo_key).split("/").at(-1)}` : null,
-      coverUrl: settings?.cover_key ? `/api/mipede/v1/media/${store.id}/${String(settings.cover_key).split("/").at(-1)}` : null,
+      ...mapIdentity(store.id, settings),
       status: settings?.is_open === 1 ? "open" : "closed",
     },
+    banners: await publicBanners(db, store.id, (settings?.slug as string) ?? store.slug),
     categories: categories.results ?? [],
     products: (products.results ?? []).map((product) => ({
       ...product,

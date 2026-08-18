@@ -166,6 +166,34 @@ export const deliverySettingsWriteSchema = z.object({
   changeNeeded: z.boolean().optional(),
 });
 
+export const identityWriteSchema = z.object({
+  logoMediaId: z.string().min(8).max(80).nullable().optional(),
+  coverDesktopMediaId: z.string().min(8).max(80).nullable().optional(),
+  coverMobileMediaId: z.string().min(8).max(80).nullable().optional(),
+  coverDesktopFocusX: z.number().min(0).max(1).optional(),
+  coverDesktopFocusY: z.number().min(0).max(1).optional(),
+  coverMobileFocusX: z.number().min(0).max(1).optional(),
+  coverMobileFocusY: z.number().min(0).max(1).optional(),
+});
+
+export const bannerWriteSchema = z.object({
+  internalName: z.string().trim().min(2).max(80),
+  desktopMediaId: z.string().min(8).max(80).nullable().optional(),
+  mobileMediaId: z.string().min(8).max(80).nullable().optional(),
+  altText: z.string().trim().max(160).optional().nullable(),
+  placement: z.enum(["hero", "after_category", "footer"]),
+  afterCategoryId: z.string().min(8).max(80).nullable().optional(),
+  targetType: z.enum(["none", "product", "category", "coupon", "external"]),
+  targetId: z.string().min(8).max(80).nullable().optional(),
+  externalUrl: z.string().trim().max(400).nullable().optional(),
+  ctaLabel: z.string().trim().max(40).nullable().optional(),
+  deviceScope: z.enum(["both", "desktop", "mobile"]).optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  status: z.enum(["draft", "active", "paused"]),
+  startsAt: z.number().int().nullable().optional(),
+  endsAt: z.number().int().nullable().optional(),
+});
+
 export const trackingLinkWriteSchema = z.object({
   name: z.string().trim().min(2).max(80),
   origin: z.enum(["instagram", "meta_ads", "google_ads", "whatsapp", "custom"]),
