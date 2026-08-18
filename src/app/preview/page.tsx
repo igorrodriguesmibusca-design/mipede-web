@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { MipedeLogo } from "@/components/brand/mipede-mark";
+import { DemoCustomerSessionControls } from "@/components/storefront/demo-customer-session-controls";
 import { routes } from "@/lib/routes";
 
 const storefront = [
@@ -9,11 +10,14 @@ const storefront = [
   { href: routes.store.product("pizza-calabresa"), label: "Produto com adicionais" },
   { href: routes.store.cart, label: "Carrinho preenchido" },
   { href: routes.store.cartEmpty, label: "Carrinho vazio" },
-  { href: routes.store.identify, label: "Identificação vazia" },
+  { href: `${routes.store.identify}?novo=1`, label: "Cliente novo — sem reconhecimento" },
+  { href: routes.store.identifyRecognized, label: "Cliente recorrente — reconhecido" },
+  { href: routes.store.identifyError, label: "WhatsApp inválido" },
   { href: routes.store.identifyFilled, label: "Identificação preenchida" },
-  { href: routes.store.identifyError, label: "Identificação com erro" },
-  { href: routes.store.address, label: "Cadastro de endereço" },
-  { href: routes.store.checkout, label: "Finalização sem endereço" },
+  { href: routes.store.address, label: "Endereços salvos / cadastro" },
+  { href: `${routes.store.checkout}?mode=entrega`, label: "Checkout para entrega" },
+  { href: `${routes.store.checkout}?mode=retirada`, label: "Checkout para retirada" },
+  { href: `${routes.store.checkout}?mode=local`, label: "Checkout para consumo no local" },
   { href: routes.store.checkoutAddress, label: "Finalização com endereço" },
   { href: routes.store.coupons, label: "Cupons" },
   { href: routes.store.orders, label: "Pedidos preenchidos" },
@@ -56,8 +60,12 @@ export default function PreviewPage() {
         <p className="mt-2 max-w-2xl text-sm text-subtle">
           Hub temporário para revisar o protótipo visual estático do MiPede. Não
           representa uma tela final do produto. Todos os dados são fictícios e
-          nenhum fluxo salva informações.
+          nenhum fluxo salva informações pessoais no navegador.
         </p>
+
+        <div className="mt-6 max-w-md">
+          <DemoCustomerSessionControls />
+        </div>
 
         <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <Section title="Cardápio do consumidor" items={storefront} />
