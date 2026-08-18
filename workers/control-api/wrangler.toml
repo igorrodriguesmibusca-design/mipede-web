@@ -14,6 +14,16 @@ database_name = "mipede-control-staging"
 database_id = "826e13c2-03c4-4331-9608-fc9b2c79cd01"
 migrations_dir = "migrations"
 
+[[d1_databases]]
+binding = "APP_DB"
+database_name = "mipede-app-staging"
+database_id = "c7f419a9-0d7a-4fac-acd0-445d15ac571b"
+migrations_dir = "migrations-app"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "mipede-media-staging"
+
 [env.staging]
 name = "mipede-control-api-staging"
 
@@ -30,6 +40,16 @@ database_name = "mipede-control-staging"
 database_id = "826e13c2-03c4-4331-9608-fc9b2c79cd01"
 migrations_dir = "migrations"
 
+[[env.staging.d1_databases]]
+binding = "APP_DB"
+database_name = "mipede-app-staging"
+database_id = "c7f419a9-0d7a-4fac-acd0-445d15ac571b"
+migrations_dir = "migrations-app"
+
+[[env.staging.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "mipede-media-staging"
+
 [env.production]
 name = "mipede-control-api"
 
@@ -45,6 +65,16 @@ binding = "DB"
 database_name = "mipede-control-production"
 database_id = "ff783a90-3443-443f-bbd2-5ac7a184331b"
 migrations_dir = "migrations"
+
+[[env.production.d1_databases]]
+binding = "APP_DB"
+database_name = "mipede-app-production"
+database_id = "e1a2308c-ee52-4105-90a3-3725937869d4"
+migrations_dir = "migrations-app"
+
+[[env.production.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "mipede-media-production"
 
 # Secrets via wrangler secret put --env staging|production
 # BETTER_AUTH_SECRET

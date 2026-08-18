@@ -1,6 +1,6 @@
 export const BFF_ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const;
 
-export const BFF_MAX_BODY_BYTES = 64 * 1024;
+export const BFF_MAX_BODY_BYTES = 2.5 * 1024 * 1024;
 export const BFF_TIMEOUT_MS = 15_000;
 export const BFF_SECRET_HEADER = "x-mipede-bff-secret";
 
