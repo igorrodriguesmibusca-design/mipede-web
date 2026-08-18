@@ -30,6 +30,32 @@ export const routes = {
     history: "/gestor/pizzaria-imperial/historico",
     settings: "/gestor/pizzaria-imperial/configuracoes",
   },
+  auth: {
+    login: "/entrar",
+    register: "/cadastro/restaurante",
+    verifyEmail: "/verificar-email",
+    forgot: "/esqueci-minha-senha",
+    reset: "/redefinir-senha",
+  },
+  onboarding: {
+    root: "/onboarding",
+    company: "/onboarding/empresa",
+    operation: "/onboarding/operacao",
+    identity: "/onboarding/identidade",
+    review: "/onboarding/revisao",
+  },
+  platform: {
+    root: "/plataforma",
+    stores: "/plataforma/estabelecimentos",
+  },
+  managerFor: (slug: string) => ({
+    root: `/gestor/${slug}`,
+    orders: `/gestor/${slug}/pedidos`,
+    dispatch: `/gestor/${slug}/expedicao`,
+    catalog: `/gestor/${slug}/cardapio`,
+    history: `/gestor/${slug}/historico`,
+    settings: `/gestor/${slug}/configuracoes`,
+  }),
   admin: {
     root: "/admin",
     performance: "/admin/desempenho",

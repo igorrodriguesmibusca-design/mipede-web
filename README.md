@@ -1,8 +1,10 @@
 # MiPede
 
-Protótipo visual estático e navegável do MiPede, uma plataforma de cardápios digitais próprios para estabelecimentos com entrega própria.
+Cardápio digital próprio para estabelecimentos com entrega própria.
 
-Esta entrega **não possui backend, autenticação, banco de dados ou integrações reais**. Todos os dados são fictícios e os botões apenas navegam entre estados visuais.
+O frontend visual continua na Vercel. Esta etapa adiciona a fundação funcional: cadastro de restaurantes, Better Auth no Worker, D1 de controle, onboarding e isolamento entre lojas.
+
+O Worker/D1/Resend/Turnstile **ainda precisam ser provisionados**. Sem isso o BFF `/api/mipede/*` responde 503 e o painel visual da Pizzaria Imperial permanece só como demonstração.
 
 ## Loja do protótipo
 
@@ -24,13 +26,15 @@ Frontend atual (Vercel):
 - Lucide Icons
 - pnpm
 
-Backend futuro (ainda não provisionado):
+Backend de controle (código no repo, conta Cloudflare ainda não provisionada):
 
-- Cloudflare Workers, D1, R2, Durable Objects e Queues
+- Cloudflare Worker `mipede-control-api`
+- D1 `mipede-control`
+- Better Auth 1.6.29 + Organization Plugin
+- Resend e Turnstile
 - Sem Supabase e sem Clerk
-- Autenticação de funcionários ainda será definida
 
-Documentos: `docs/cloudflare-architecture.md` e `docs/customer-identification-flow.md`.
+Documentos: `docs/authentication-architecture.md`, `docs/tenant-isolation.md`, `docs/restaurant-onboarding.md`, `docs/security-threat-model.md`.
 
 ## Como rodar
 
@@ -44,9 +48,17 @@ Validações:
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-Não é necessário criar arquivo `.env`.
+Copie `.env.example` e `.dev.vars.example`. Não commite secrets.
+
+Worker local (depois de criar o D1 e os secrets):
+
+```bash
+pnpm worker:dev
+```
 
 ## Rotas
 
@@ -55,7 +67,14 @@ Não é necessário criar arquivo `.env`.
 | Rota | Descrição |
 | --- | --- |
 | `/` | Redireciona para `/preview` |
-| `/preview` | Central temporária de visualização |
+| `/preview` | Central temporária de visualização (protegida em produção) |
+| `/entrar` | Login do responsável/equipe |
+| `/cadastro/restaurante` | Cadastro do responsável |
+| `/verificar-email` | Aviso de verificação |
+| `/esqueci-minha-senha` | Recuperação de senha |
+| `/redefinir-senha` | Nova senha |
+| `/onboarding/*` | Empresa, operação, identidade e revisão |
+| `/plataforma/estabelecimentos` | Painel interno MiPede |
 
 ### Cardápio
 

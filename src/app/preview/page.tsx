@@ -63,6 +63,18 @@ export default function PreviewPage() {
           nenhum fluxo salva informações pessoais no navegador.
         </p>
 
+        <div className="mt-6 flex flex-wrap gap-3 text-sm">
+          <Link href={routes.auth.login} className="font-medium text-brand hover:underline">
+            Entrar
+          </Link>
+          <Link href={routes.auth.register} className="font-medium text-brand hover:underline">
+            Cadastrar restaurante
+          </Link>
+          <Link href={routes.platform.stores} className="font-medium text-brand hover:underline">
+            Painel da plataforma
+          </Link>
+        </div>
+
         <div className="mt-6 max-w-md">
           <DemoCustomerSessionControls />
         </div>

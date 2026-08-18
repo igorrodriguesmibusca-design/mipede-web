@@ -16,10 +16,13 @@ import { MipedeLogo } from "@/components/brand/mipede-mark";
 import { useOrderManager } from "@/components/order-manager/order-manager-provider";
 import { Switch } from "@/components/ui/switch";
 import { routes } from "@/lib/routes";
+import { useTenant } from "@/lib/tenant-context";
 import { cn } from "@/lib/utils";
 
 export function OrderManagerHeader() {
   const { storeOpen, toggleStore, soundOn, toggleSound, connection } = useOrderManager();
+  const tenant = useTenant();
+  const storeName = tenant.mode === "live" ? (tenant.store?.name ?? "Sua loja") : "Pizzaria Imperial";
   const [clock, setClock] = useState("--:--");
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export function OrderManagerHeader() {
         <MipedeLogo />
         <span className="hidden h-6 w-px bg-zinc-200 sm:block" />
         <div className="hidden min-w-0 sm:block">
-          <p className="truncate text-sm font-semibold">Pizzaria Imperial</p>
+          <p className="truncate text-sm font-semibold">{storeName}</p>
           <p className={cn("text-xs font-medium", storeOpen ? "text-success" : "text-red-500")}>
             {storeOpen ? "Loja aberta" : "Loja fechada"}
           </p>
