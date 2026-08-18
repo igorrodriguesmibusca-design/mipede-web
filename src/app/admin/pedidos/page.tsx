@@ -1,5 +1,5 @@
-import { OrdersKanban } from "@/components/admin/orders-kanban";
+import { OrdersHistory } from "@/components/admin/orders-history";
 
 export default function AdminOrdersPage() {
-  return <OrdersKanban />;
+  return <OrdersHistory />;
 }
