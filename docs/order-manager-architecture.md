@@ -37,32 +37,26 @@ Nesta etapa o fluxo é apenas visual, com estado local e timestamps demonstrativ
 ## Limitações atuais
 
 - Sem persistência
-- Sem WebSocket, Supabase Realtime ou polling
+- Sem Workers, Durable Objects, WebSockets reais ou polling
 - Sem GPS
 - Sem app de entregador
-- Sem autenticação
+- Sem autenticação operacional (ainda será definida)
 - Timers apenas para relógio e rótulo de sincronização
 
 ## Fonte oficial futura
 
-O PostgreSQL será a fonte oficial. O Realtime apenas notifica as interfaces.
+O **Cloudflare D1** será a fonte persistente. O tempo real do Gestor usará **Durable Objects** e WebSockets. Ver `docs/cloudflare-architecture.md`.
 
 Fluxo futuro:
 
 1. Cliente finaliza o pedido.
-2. Backend valida e grava.
-3. Banco registra o pedido.
-4. Evento privado chega ao Gestor.
-5. Gestor atualiza a interface.
-6. Operador altera o status.
-7. Backend valida a transição.
-8. Banco persiste o novo status.
-9. Evento atualizado é enviado.
-10. O Admin lê dados persistidos para métricas.
-
-Canal sugerido: `store:{storeId}:orders`
-
-O canal deve ser privado, limitado ao estabelecimento e protegido por autenticação e RLS.
+2. Worker valida e grava no D1.
+3. O Durable Object `store:{storeId}:order-manager` recebe a alteração.
+4. Gestores conectados recebem o evento.
+5. A interface atualiza sem recarregar.
+6. O operador altera o status.
+7. Worker valida a transição e persiste no D1.
+8. O Admin lê dados persistidos para métricas.
 
 ## Eventos futuros
 
@@ -77,9 +71,12 @@ O canal deve ser privado, limitado ao estabelecimento e protegido por autentica�
 - `store.status_changed`
 - `catalog.item_availability_changed`
 
-## Tabelas futuras (conceitual)
+## Tabelas futuras (conceitual, D1)
 
 - `stores`
+- `customers`
+- `customer_addresses`
+- `customer_sessions`
 - `orders`
 - `order_items`
 - `order_item_options`
@@ -91,19 +88,20 @@ O canal deve ser privado, limitado ao estabelecimento e protegido por autentica�
 
 ## Reconexão futura
 
-Mensagens Realtime não substituem o banco. Ao abrir ou reconectar:
+Mensagens em tempo real não substituem o D1. Ao abrir ou reconectar:
 
-1. Buscar pedidos ativos no banco.
+1. Buscar pedidos ativos no D1.
 2. Construir o estado atual.
-3. Assinar o canal privado.
+3. Assinar o Durable Object da loja.
 4. Aplicar novos eventos.
 5. Rebuscar se houver inconsistência.
 
 ## Segurança futura
 
 - Não confiar apenas no status enviado pelo navegador.
-- Validar transições no servidor.
-- Verificar estabelecimento e usuário.
+- Validar transições no Worker.
+- Verificar estabelecimento e usuário operacional.
 - Registrar histórico com usuário, data, status anterior e novo.
 - Usar idempotência.
 - Impedir atualização de pedidos de outra loja.
+- Isolar tudo por `store_id`.

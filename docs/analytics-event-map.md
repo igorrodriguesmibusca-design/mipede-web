@@ -82,13 +82,20 @@ Se o investimento for zero, o ROI deve ser `—`.
 
 O indicador desta etapa é **ROI promocional estimado**. Ele não desconta custo de produção, embalagem, impostos ou comissões. O ROI real só poderá ser calculado quando o backend tiver custo de item e conciliação financeira.
 
+## Cliente e métricas
+
+Pedidos, faturamento e ticket médio devem ser associados pelo `customer_id` persistido no D1, sem depender do texto do nome ou do telefone.
+
+A sessão de visita do funil (`session_id`) é diferente da sessão segura do cliente (`customer_sessions`).
+
 ## Dependências futuras de banco e rastreamento
 
-Dependem de persistência e eventos reais:
+Dependem de persistência no Cloudflare D1, eventos via Workers/Queues e tempo real via Durable Objects:
 
 - sessão única por visita
 - funil fechado na ordem correta
 - ranking de produtos e complementos
 - taxa e motivos de cancelamento
 - investimento, faturamento e ROI de cupons
-- atualização automática do Kanban
+- atualização automática do Gestor
+- reconhecimento de cliente recorrente após o pedido

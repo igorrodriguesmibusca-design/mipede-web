@@ -14,6 +14,8 @@ Esta entrega **não possui backend, autenticação, banco de dados ou integraç�
 
 ## Tecnologias
 
+Frontend atual (Vercel):
+
 - Next.js 16 (App Router)
 - React 19
 - TypeScript
@@ -21,6 +23,14 @@ Esta entrega **não possui backend, autenticação, banco de dados ou integraç�
 - shadcn/ui
 - Lucide Icons
 - pnpm
+
+Backend futuro (ainda não provisionado):
+
+- Cloudflare Workers, D1, R2, Durable Objects e Queues
+- Sem Supabase e sem Clerk
+- Autenticação de funcionários ainda será definida
+
+Documentos: `docs/cloudflare-architecture.md` e `docs/customer-identification-flow.md`.
 
 ## Como rodar
 
@@ -56,9 +66,10 @@ Não é necessário criar arquivo `.env`.
 | `/loja/pizzaria-imperial/produto/[id]` | Produto com adicionais |
 | `/loja/pizzaria-imperial/carrinho` | Carrinho preenchido |
 | `/loja/pizzaria-imperial/carrinho/vazio` | Carrinho vazio |
-| `/loja/pizzaria-imperial/identificacao` | Identificação vazia |
+| `/loja/pizzaria-imperial/identificacao` | Identificação (novo ou reconhecido) |
 | `/loja/pizzaria-imperial/identificacao/preenchido` | Identificação preenchida |
 | `/loja/pizzaria-imperial/identificacao/erro` | Identificação com erro |
+| `/loja/pizzaria-imperial/identificacao/reconhecido` | Cliente recorrente |
 | `/loja/pizzaria-imperial/endereco` | Cadastro de endereço |
 | `/loja/pizzaria-imperial/checkout` | Finalização sem endereço |
 | `/loja/pizzaria-imperial/checkout/endereco` | Finalização com endereço |

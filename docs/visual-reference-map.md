@@ -77,6 +77,7 @@ A rota `/bio/pizzaria-imperial` mantém a versão mobile aprovada e ganhou uma c
 | Nova categoria | `/admin/cardapio/categorias` (modal) |
 | Novo produto | `/admin/cardapio/produtos/novo` |
 | Complementos | `/admin/cardapio/complementos` |
+| Identificação reconhecida | `/loja/pizzaria-imperial/identificacao/reconhecido` |
 | Histórico de Pedidos | `/admin/pedidos` |
 | Gestor — Início | `/gestor/pizzaria-imperial` |
 | Gestor — Pedidos | `/gestor/pizzaria-imperial/pedidos` |
