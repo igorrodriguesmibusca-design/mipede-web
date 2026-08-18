@@ -82,7 +82,7 @@ Não é necessário criar arquivo `.env`.
 | `/admin/desempenho` | Desempenho — Vendas |
 | `/admin/desempenho/cardapio` | Desempenho — Cardápio |
 | `/admin/desempenho/cancelamentos` | Desempenho — Cancelamentos |
-| `/admin/pedidos` | Pedidos (Kanban) |
+| `/admin/pedidos` | Histórico de Pedidos |
 | `/admin/cardapio/categorias` | Categorias (modal Nova categoria) |
 | `/admin/cardapio/produtos` | Produtos |
 | `/admin/cardapio/produtos/novo` | Novo produto |
@@ -96,6 +96,19 @@ Não é necessário criar arquivo `.env`.
 | `/admin/configuracoes/entrega-pagamento` | Entrega e Pagamento |
 | `/admin/marketing/links-rastreamento` | Links de Rastreamento |
 
+### Gestor de Pedidos
+
+Experiência operacional independente do painel administrativo.
+
+| Rota | Tela |
+| --- | --- |
+| `/gestor/pizzaria-imperial` | Início da operação |
+| `/gestor/pizzaria-imperial/pedidos` | Fila operacional |
+| `/gestor/pizzaria-imperial/expedicao` | Expedição própria |
+| `/gestor/pizzaria-imperial/cardapio` | Cardápio rápido |
+| `/gestor/pizzaria-imperial/historico` | Histórico operacional |
+| `/gestor/pizzaria-imperial/configuracoes` | Configurações da operação |
+
 ## Observações
 
 - O MiPede não é um marketplace.
@@ -103,3 +116,4 @@ Não é necessário criar arquivo `.env`.
 - Interações de cadastro, Kanban e cupons usam estado local e voltam ao mock ao recarregar.
 - O mapa de referências visuais está em `docs/visual-reference-map.md`.
 - As regras de analytics futuro estão em `docs/analytics-event-map.md`.
+- A arquitetura do Gestor e do Realtime futuro está em `docs/order-manager-architecture.md`.

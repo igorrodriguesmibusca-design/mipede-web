@@ -36,7 +36,7 @@ const admin = [
   { href: routes.admin.products, label: "Produtos" },
   { href: routes.admin.productNew, label: "Novo produto" },
   { href: routes.admin.addons, label: "Complementos" },
-  { href: routes.admin.orders, label: "Pedidos Kanban" },
+  { href: routes.admin.orders, label: "Histórico de Pedidos (Admin)" },
   { href: routes.admin.coupons, label: "Cupons" },
   { href: routes.admin.coupon("fretegratis"), label: "Detalhes FRETEGRATIS" },
   { href: routes.admin.coupon("bemvindo10"), label: "Detalhes BEMVINDO10" },
@@ -59,7 +59,7 @@ export default function PreviewPage() {
           nenhum fluxo salva informações.
         </p>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <Section title="Cardápio do consumidor" items={storefront} />
           <Section
             title="Link da bio"
@@ -67,6 +67,19 @@ export default function PreviewPage() {
             note="A versão mobile permanece igual. A composição desktop aparece a partir de 1024px."
           />
           <Section title="Painel administrativo" items={admin} />
+          <Section
+            title="Gestor de Pedidos"
+            items={[
+              { href: routes.manager.root, label: "Início do Gestor" },
+              { href: routes.manager.orders, label: "Pedidos operacionais" },
+              { href: routes.manager.dispatch, label: "Expedição" },
+              { href: routes.manager.catalog, label: "Cardápio rápido" },
+              { href: routes.manager.history, label: "Histórico operacional" },
+              { href: routes.manager.settings, label: "Configurações" },
+              { href: routes.admin.orders, label: "Histórico de Pedidos no Admin" },
+            ]}
+            note="Experiência independente do painel administrativo, focada na operação em tempo real."
+          />
         </div>
       </div>
     </div>

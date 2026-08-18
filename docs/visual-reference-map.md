@@ -77,6 +77,12 @@ A rota `/bio/pizzaria-imperial` mantém a versão mobile aprovada e ganhou uma c
 | Nova categoria | `/admin/cardapio/categorias` (modal) |
 | Novo produto | `/admin/cardapio/produtos/novo` |
 | Complementos | `/admin/cardapio/complementos` |
-| Pedidos Kanban | `/admin/pedidos` |
+| Histórico de Pedidos | `/admin/pedidos` |
+| Gestor — Início | `/gestor/pizzaria-imperial` |
+| Gestor — Pedidos | `/gestor/pizzaria-imperial/pedidos` |
+| Gestor — Expedição | `/gestor/pizzaria-imperial/expedicao` |
+| Gestor — Cardápio rápido | `/gestor/pizzaria-imperial/cardapio` |
+| Gestor — Histórico | `/gestor/pizzaria-imperial/historico` |
+| Gestor — Configurações | `/gestor/pizzaria-imperial/configuracoes` |
 | Cupons | `/admin/marketing/promocoes-cupons` |
 | Detalhe do cupom | `/admin/marketing/cupons/[codigo]` |
