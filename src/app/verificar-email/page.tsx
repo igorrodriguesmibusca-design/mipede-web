@@ -1,37 +1,14 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import { Button } from "@/components/ui/button";
+import { routes } from "@/lib/routes";
 
 export default function VerifyEmailPage() {
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function resend() {
-    const response = await fetch("/api/mipede/auth/send-verification-email", {
-      method: "POST",
-      credentials: "include",
-    });
-    setMessage(
-      response.status === 503
-        ? "O envio de e-mail depende do Resend no Worker."
-        : "Se o cadastro existir, reenviamos a verificação.",
-    );
-  }
-
   return (
-    <AuthShell
-      title="Verifique seu e-mail"
-      description="Enviamos um link de confirmação. Sem essa verificação o painel administrativo permanece bloqueado."
-    >
-      <p className="text-sm text-subtle">
-        Não encontramos o e-mail? Confira o spam. O reenvio é limitado para evitar abuso.
-      </p>
-      <Button type="button" onClick={() => void resend()} className="mt-5 h-11 w-full rounded-xl">
-        Reenviar verificação
-      </Button>
-      {message ? <p className="mt-3 text-sm text-ink">{message}</p> : null}
+    <AuthShell title="Verificação de e-mail" description="O acesso atual é feito com Google, sem envio de e-mail pelo MiPede.">
+      <Link href={routes.auth.login} className="text-sm font-medium text-brand hover:underline">
+        Entrar com Google
+      </Link>
     </AuthShell>
   );
 }

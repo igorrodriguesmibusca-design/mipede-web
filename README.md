@@ -6,7 +6,7 @@ O frontend visual continua na Vercel. Esta etapa adiciona a fundação funcional
 
 Worker e D1 de staging/produção estão no ar. O BFF da Vercel fala com o Worker por um segredo compartilhado. Produção não usa modo demonstração.
 
-O envio de e-mail (verificação e senha) ainda depende do Resend com domínio verificado.
+O acesso público atual é **Continuar com Google**. E-mail e senha ficam desligados até existir domínio próprio. O Resend não é obrigatório nesta fase.
 
 ## Loja do protótipo
 

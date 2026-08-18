@@ -2,6 +2,8 @@
 
 Better Auth **1.6.29**, no Cloudflare Worker, com D1 (`mipede-control`).
 
+Nesta fase o método público é **Google**. E-mail e senha estão desligados no Worker (`MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED=0`). Detalhes: `docs/google-authentication.md`.
+
 O frontend na Vercel nunca fala direto com o D1 e nunca recebe secrets.
 
 ## Superfícies

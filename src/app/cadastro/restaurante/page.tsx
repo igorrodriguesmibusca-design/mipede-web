@@ -1,24 +1,27 @@
 import Link from "next/link";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import { RegisterForm } from "@/components/auth/register-form";
+import { GoogleButton } from "@/components/auth/google-button";
 import { routes } from "@/lib/routes";
 
 export default function RegisterPage() {
   return (
     <AuthShell
-      title="Cadastrar restaurante"
-      description="Crie o acesso do responsável. CNPJ e dados da loja entram no onboarding."
+      title="Crie sua conta de restaurante"
+      description="Use sua conta Google. Os dados da loja entram no onboarding."
       footer={
-        <p>
-          Já possui conta?{" "}
-          <Link href={routes.auth.login} className="font-medium text-brand hover:underline">
-            Entrar
-          </Link>
-        </p>
+        <div className="flex flex-col gap-2">
+          <p>
+            Já possui conta?{" "}
+            <Link href={routes.auth.login} className="font-medium text-brand hover:underline">
+              Entrar
+            </Link>
+          </p>
+          <p className="text-xs">Convites de equipe estarão disponíveis futuramente.</p>
+        </div>
       }
     >
-      <RegisterForm />
+      <GoogleButton requireTerms />
     </AuthShell>
   );
 }

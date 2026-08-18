@@ -3,8 +3,11 @@ import { organization } from "better-auth/plugins";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
 
+import { isEmailPasswordAuthEnabled, isGoogleAuthEnabled, isPasswordAuthPath, PASSWORD_AUTH_UNAVAILABLE } from "../../../src/server/auth-flags";
 import { authorizePlatform, authorizeStoreAccess, rejectRoleEscalation } from "../../../src/server/authorize";
 import { MemoryRateLimiter } from "../../../src/server/rate-limit";
+import { resolvePostAuthDestination } from "../../../src/server/redirects";
+import { PRIVACY_VERSION, TERMS_INTENT_COOKIE, TERMS_INTENT_MAX_AGE, TERMS_VERSION } from "../../../src/server/terms";
 import {
   canAccessPlatform,
   isValidSlug,
@@ -37,6 +40,10 @@ export interface ControlEnv {
   MIPEDE_BFF_SHARED_SECRET?: string;
   ALLOW_TEST_EMAIL_BYPASS?: string;
   ENVIRONMENT?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED?: string;
+  MIPEDE_GOOGLE_AUTH_ENABLED?: string;
 }
 
 const limiter = new MemoryRateLimiter(8, 60_000);
@@ -129,11 +136,20 @@ async function sendEmail(env: ControlEnv, to: string, subject: string, html: str
   });
 }
 
+function passwordEnabled(env: ControlEnv): boolean {
+  return isEmailPasswordAuthEnabled(env.MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED);
+}
+
+function googleEnabled(env: ControlEnv): boolean {
+  return isGoogleAuthEnabled(env.MIPEDE_GOOGLE_AUTH_ENABLED) && Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+}
+
 function createAuth(env: ControlEnv) {
   if (!env.BETTER_AUTH_SECRET || !env.DB) return null;
   const db = new Kysely({
     dialect: new D1Dialect({ database: env.DB }),
   });
+  const google = googleEnabled(env);
 
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
@@ -145,11 +161,12 @@ function createAuth(env: ControlEnv) {
       type: "sqlite",
     },
     emailAndPassword: {
-      enabled: true,
+      enabled: passwordEnabled(env),
       requireEmailVerification: true,
       minPasswordLength: 10,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
+        if (!passwordEnabled(env) || !env.RESEND_API_KEY) return;
         await sendEmail(
           env,
           user.email,
@@ -159,8 +176,9 @@ function createAuth(env: ControlEnv) {
       },
     },
     emailVerification: {
-      sendOnSignUp: true,
+      sendOnSignUp: passwordEnabled(env),
       sendVerificationEmail: async ({ user, url }) => {
+        if (!passwordEnabled(env) || !env.RESEND_API_KEY) return;
         await sendEmail(
           env,
           user.email,
@@ -169,6 +187,14 @@ function createAuth(env: ControlEnv) {
         );
       },
     },
+    socialProviders: google
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID as string,
+            clientSecret: env.GOOGLE_CLIENT_SECRET as string,
+          },
+        }
+      : {},
     user: {
       additionalFields: {
         whatsapp: { type: "string", required: false },
@@ -192,7 +218,15 @@ function createAuth(env: ControlEnv) {
   });
 }
 
+async function hasGoogleAccount(env: ControlEnv, userId: string): Promise<boolean> {
+  const row = await env.DB.prepare(`SELECT providerId FROM account WHERE userId = ? AND providerId = ?`)
+    .bind(userId, "google")
+    .first<{ providerId: string }>();
+  return Boolean(row);
+}
+
 async function loadContext(env: ControlEnv, userId: string, email: string, verified: boolean): Promise<AuthContext> {
+  const googleAccount = await hasGoogleAccount(env, userId);
   const members = await env.DB.prepare(
     `SELECT m.organizationId, m.role, s.id as storeId, s.slug as storeSlug, s.status as storeStatus
      FROM member m
@@ -211,7 +245,7 @@ async function loadContext(env: ControlEnv, userId: string, email: string, verif
   return {
     userId,
     email,
-    emailVerified: verified,
+    emailVerified: verified || googleAccount,
     platformRole: isPlatformEmail(env, email) ? "platform_admin" : null,
     memberships: (members.results ?? [])
       .filter((item) => item.storeId)
@@ -295,6 +329,119 @@ export default {
 
     if (!hasValidBffSecret(request, env)) {
       return json({ error: "forbidden" }, 403);
+    }
+
+    if (!passwordEnabled(env) && (isPasswordAuthPath(url.pathname) || ["/api/mipede/v1/register", "/api/mipede/v1/login", "/api/mipede/v1/forgot-password", "/api/mipede/v1/reset-password"].includes(url.pathname))) {
+      return json({ error: PASSWORD_AUTH_UNAVAILABLE }, 403);
+    }
+
+    if (url.pathname === "/api/mipede/v1/auth/methods" && request.method === "GET") {
+      return json({
+        google: googleEnabled(env),
+        password: passwordEnabled(env),
+      });
+    }
+
+    if (url.pathname === "/api/mipede/v1/auth/google/start" && request.method === "POST") {
+      const blocked = rateLimit(`google:${ip}`);
+      if (blocked) return blocked;
+      if (!googleEnabled(env)) return json({ error: PASSWORD_AUTH_UNAVAILABLE }, 403);
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      if (body.role === "platform_admin" || body.isPlatformAdmin) return json({ error: "forbidden_role" }, 403);
+      const forbidden = rejectMassAssignment(body, ["acceptTerms", "acceptPrivacy"]);
+      if (forbidden.length) return json({ error: "mass_assignment", fields: forbidden }, 400);
+      if (body.acceptTerms !== true || body.acceptPrivacy !== true) {
+        return json({ error: "terms_required" }, 400);
+      }
+      const auth = createAuth(env);
+      if (!auth) return json({ error: "auth_unavailable" }, 503);
+      try {
+        const result = await auth.api.signInSocial({
+          body: {
+            provider: "google",
+            callbackURL: "/auth/continuar",
+            errorCallbackURL: "/entrar",
+          },
+          headers: request.headers,
+        });
+        const url = result && typeof result === "object" && "url" in result ? String(result.url ?? "") : "";
+        if (!url) return json({ error: "google_unavailable" }, 503);
+        const headers = new Headers({ "content-type": "application/json; charset=utf-8" });
+        headers.append(
+          "set-cookie",
+          `${TERMS_INTENT_COOKIE}=${TERMS_VERSION}|${PRIVACY_VERSION}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${TERMS_INTENT_MAX_AGE}`,
+        );
+        return new Response(JSON.stringify({ url }), { status: 200, headers });
+      } catch {
+        return json({ error: "google_unavailable" }, 503);
+      }
+    }
+
+    if (url.pathname === "/api/mipede/v1/auth/destination" && request.method === "GET") {
+      const current = await sessionContext(request, env);
+      if (!current) return json({ error: "unauthenticated" }, 401);
+      const cookieHeader = request.headers.get("cookie") ?? "";
+      const intent = cookieHeader
+        .split(";")
+        .map((part) => part.trim())
+        .find((part) => part.startsWith(`${TERMS_INTENT_COOKIE}=`))
+        ?.slice(TERMS_INTENT_COOKIE.length + 1);
+      if (intent === `${TERMS_VERSION}|${PRIVACY_VERSION}`) {
+        try {
+          await env.DB.prepare(
+            `INSERT INTO terms_acceptances (id, user_id, terms_version, privacy_version, ip_hash, user_agent_summary, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          )
+            .bind(
+              crypto.randomUUID(),
+              current.context.userId,
+              TERMS_VERSION,
+              PRIVACY_VERSION,
+              await sha256(ip),
+              (request.headers.get("user-agent") ?? "").slice(0, 80),
+              Date.now(),
+            )
+            .run();
+          await writeAudit(env, {
+            actor: current.context.userId,
+            action: "terms_accepted",
+            resourceType: "user",
+            resourceId: current.context.userId,
+            ip,
+            ua: request.headers.get("user-agent") ?? undefined,
+          });
+        } catch {
+          // Tabela ainda não migrada não pode impedir o login Google.
+        }
+      }
+      if (current.context.platformRole === "platform_admin") {
+        await writeAudit(env, {
+          actor: current.context.userId,
+          action: "platform_admin_recognized",
+          resourceType: "user",
+          resourceId: current.context.userId,
+          ip,
+          ua: request.headers.get("user-agent") ?? undefined,
+        });
+      }
+      const store = current.context.memberships[0]
+        ? await env.DB.prepare(`SELECT slug, status, onboarding_status FROM stores WHERE id = ?`)
+            .bind(current.context.memberships[0].storeId)
+            .first<{ slug: string; status: StoreStatus; onboarding_status: string }>()
+        : null;
+      const path = resolvePostAuthDestination({
+        platformAdmin: current.context.platformRole === "platform_admin",
+        store: store
+          ? {
+              slug: store.slug,
+              role: current.context.memberships[0].role,
+              status: store.status,
+              onboardingStatus: store.onboarding_status,
+            }
+          : null,
+        requested: url.searchParams.get("next"),
+      });
+      return json({ path });
     }
 
     if (!env.BETTER_AUTH_SECRET) {
