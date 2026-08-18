@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { Copy, ExternalLink } from "lucide-react";
+
+import { LiveSettingsPage } from "@/components/admin/live-settings-page";
+import { useTenant } from "@/lib/tenant-context";
 
 import { PageHeading } from "@/components/admin/page-heading";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -11,6 +16,8 @@ import { routes } from "@/lib/routes";
 import { formatCurrency } from "@/lib/utils";
 
 export default function StoreSettingsPage() {
+  const tenant = useTenant();
+  if (tenant.mode === "live") return <LiveSettingsPage />;
   const previewProducts = products.slice(0, 3);
 
   return (

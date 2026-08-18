@@ -1,10 +1,17 @@
+"use client";
+
 import { Calendar, Search } from "lucide-react";
+
+import { LiveCouponsPage } from "@/components/admin/live-coupons-page";
+import { useTenant } from "@/lib/tenant-context";
 
 import { CouponMetrics } from "@/components/admin/coupon-metrics";
 import { CouponPerformanceTable } from "@/components/admin/coupon-performance-table";
 import { PageHeading } from "@/components/admin/page-heading";
 
 export default function CouponsAdminPage() {
+  const tenant = useTenant();
+  if (tenant.mode === "live") return <LiveCouponsPage />;
   return (
     <div>
       <PageHeading

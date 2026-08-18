@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import { GripVertical, Info, MoreVertical, Pencil, Search } from "lucide-react";
 
+import { LiveCategoriesPage } from "@/components/admin/live-categories-page";
+import { useTenant } from "@/lib/tenant-context";
+
 import {
   CategoryFormDialog,
   draftFromCategory,
@@ -17,6 +20,12 @@ import { Toast } from "@/components/ui/toast";
 import { categories as initialCategories, type Category } from "@/data/mock-products";
 
 export default function CategoriesPage() {
+  const tenant = useTenant();
+  if (tenant.mode === "live") return <LiveCategoriesPage />;
+  return <DemoCategoriesPage />;
+}
+
+function DemoCategoriesPage() {
   const [rows, setRows] = useState<Category[]>(initialCategories);
   const [draft, setDraft] = useState<CategoryDraft | null>(null);
   const [toast, setToast] = useState<string | null>(null);

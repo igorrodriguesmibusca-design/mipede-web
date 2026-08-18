@@ -1,4 +1,8 @@
+"use client";
+
 import { Download, Eye, MoreVertical, Repeat, Search, Ticket, UserPlus, Users } from "lucide-react";
+
+import { useTenant } from "@/lib/tenant-context";
 
 import { PageHeading } from "@/components/admin/page-heading";
 import { Pagination } from "@/components/admin/pagination";
@@ -22,6 +26,8 @@ const avatarTone: Record<string, string> = {
 };
 
 export default function CustomersPage() {
+  const tenant = useTenant();
+  const live = tenant.mode === "live";
   return (
     <div>
       <PageHeading
@@ -30,12 +36,12 @@ export default function CustomersPage() {
       />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total de clientes" value={String(customerStats.total)} icon={Users} tone="rose" />
-        <StatCard label="Novos clientes" value={String(customerStats.newCustomers)} icon={UserPlus} tone="green" />
-        <StatCard label="Clientes recorrentes" value={String(customerStats.recurring)} icon={Repeat} />
+        <StatCard label="Total de clientes" value={live ? "0" : String(customerStats.total)} icon={Users} tone="rose" />
+        <StatCard label="Novos clientes" value={live ? "0" : String(customerStats.newCustomers)} icon={UserPlus} tone="green" />
+        <StatCard label="Clientes recorrentes" value={live ? "0" : String(customerStats.recurring)} icon={Repeat} />
         <StatCard
           label="Ticket médio"
-          value={formatCurrency(customerStats.averageTicket)}
+          value={live ? formatCurrency(0) : formatCurrency(customerStats.averageTicket)}
           icon={Ticket}
           tone="amber"
         />
@@ -78,7 +84,13 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody>
-              {customers.map((customer) => (
+              {live ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-subtle">
+                    Os clientes aparecerão após os primeiros pedidos.
+                  </td>
+                </tr>
+              ) : customers.map((customer) => (
                 <tr key={customer.id} className="border-t border-zinc-100">
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-2 font-medium">

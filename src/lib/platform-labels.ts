@@ -147,6 +147,8 @@ const AUDIT_EVENT_MAP: Record<string, string> = {
   onboarding_company: "Cadastro do estabelecimento iniciado",
   terms_accepted: "Termos de uso aceitos",
   register: "Conta criada",
+  store_archived_duplicate: "Cadastro duplicado arquivado",
+  stores_provisioned: "Estrutura das lojas provisionada",
 };
 
 export function auditEventLabel(action: string | null | undefined): string {

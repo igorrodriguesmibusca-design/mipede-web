@@ -1,4 +1,9 @@
+"use client";
+
 import { BarChart3, Copy, CreditCard, Eye, MoreVertical, ShoppingBag, Users } from "lucide-react";
+
+import { StorePublicLinkCard } from "@/components/admin/share-store-link";
+import { useTenant } from "@/lib/tenant-context";
 
 import { PageHeading } from "@/components/admin/page-heading";
 import { Pagination } from "@/components/admin/pagination";
@@ -15,8 +20,11 @@ const originClass: Record<string, string> = {
 };
 
 export default function TrackingPage() {
+  const tenant = useTenant();
+  const live = tenant.mode === "live";
   return (
     <div>
+      {live ? <div className="mb-5"><StorePublicLinkCard compact /></div> : null}
       <PageHeading
         title="Links de Rastreamento"
         description="Acompanhe quais divulgações geram pedidos e faturamento"

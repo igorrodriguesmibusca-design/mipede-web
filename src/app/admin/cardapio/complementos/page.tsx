@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import { MoreVertical, Search } from "lucide-react";
 
+import { LiveComplementsPage } from "@/components/admin/live-complements-page";
+import { useTenant } from "@/lib/tenant-context";
+
 import { ComplementOptionRow, type OptionDraft } from "@/components/admin/complement-option-row";
 import { PageHeading } from "@/components/admin/page-heading";
 import { Dialog } from "@/components/ui/dialog";
@@ -44,6 +47,12 @@ function fromMock(): GroupDraft[] {
 }
 
 export default function ComplementsPage() {
+  const tenant = useTenant();
+  if (tenant.mode === "live") return <LiveComplementsPage />;
+  return <DemoComplementsPage />;
+}
+
+function DemoComplementsPage() {
   const [groups, setGroups] = useState<GroupDraft[]>(fromMock);
   const [selectedId, setSelectedId] = useState(groups[0]?.id ?? "");
   const [query, setQuery] = useState("");

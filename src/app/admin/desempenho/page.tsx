@@ -1,4 +1,8 @@
+"use client";
+
 import { Banknote, ShoppingBag, Ticket, Users } from "lucide-react";
+
+import { useTenant } from "@/lib/tenant-context";
 
 import { LineChart } from "@/components/admin/line-chart";
 import { PageHeading } from "@/components/admin/page-heading";
@@ -10,11 +14,16 @@ import { formatCurrency } from "@/lib/utils";
 const ranges = ["Hoje", "Últimos 7 dias", "30 dias"];
 
 export default function PerformancePage() {
+  const tenant = useTenant();
+  const live = tenant.mode === "live";
+  const finished = live ? "0" : String(performanceMetrics.finishedOrders);
+  const revenue = live ? formatCurrency(0) : formatCurrency(performanceMetrics.revenue);
+  const ticket = live ? formatCurrency(0) : formatCurrency(performanceMetrics.averageTicket);
   return (
     <div>
       <PageHeading
         title="Desempenho"
-        description="Acompanhe os principais indicadores da sua loja"
+        description={live ? "Os indicadores aparecerão após os primeiros acessos e pedidos." : "Acompanhe os principais indicadores da sua loja"}
       />
 
       <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -38,32 +47,32 @@ export default function PerformancePage() {
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Pedidos finalizados"
-          value={String(performanceMetrics.finishedOrders)}
-          delta="14,29%"
+          value={finished}
+          delta={live ? undefined : "14,29%"}
           up={false}
           icon={ShoppingBag}
           tone="orange"
         />
         <StatCard
           label="Faturamento"
-          value={formatCurrency(performanceMetrics.revenue)}
-          delta="5,4%"
+          value={revenue}
+          delta={live ? undefined : "5,4%"}
           up={false}
           icon={Banknote}
           tone="rose"
         />
         <StatCard
           label="Ticket médio"
-          value={formatCurrency(performanceMetrics.averageTicket)}
-          delta="10,37%"
+          value={ticket}
+          delta={live ? undefined : "10,37%"}
           up
           icon={Ticket}
           tone="green"
         />
         <StatCard
           label="Novos clientes"
-          value={String(performanceMetrics.newCustomers)}
-          delta="33,33%"
+          value={live ? "0" : String(performanceMetrics.newCustomers)}
+          delta={live ? undefined : "33,33%"}
           up={false}
           icon={Users}
           tone="rose"

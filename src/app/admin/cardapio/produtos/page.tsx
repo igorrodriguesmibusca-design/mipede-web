@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpDown, Copy, MoreVertical, Pencil, Search } from "lucide-react";
+
+import { LiveProductsPage } from "@/components/admin/live-products-page";
+import { useTenant } from "@/lib/tenant-context";
 
 import { PageHeading } from "@/components/admin/page-heading";
 import { Pagination } from "@/components/admin/pagination";
@@ -10,6 +15,8 @@ import { routes } from "@/lib/routes";
 import { formatCurrency } from "@/lib/utils";
 
 export default function ProductsPage() {
+  const tenant = useTenant();
+  if (tenant.mode === "live") return <LiveProductsPage />;
   return (
     <div>
       <PageHeading

@@ -1,5 +1,9 @@
 export const STORE_BASE = "/loja/pizzaria-imperial";
 
+export function storefrontPath(slug: string) {
+  return `/loja/${slug}`;
+}
+
 export const routes = {
   preview: "/preview",
   store: {

@@ -1,4 +1,9 @@
+"use client";
+
 import { Info, Pencil, Trash2 } from "lucide-react";
+
+import { LiveDeliveryPage } from "@/components/admin/live-delivery-page";
+import { useTenant } from "@/lib/tenant-context";
 
 import { PageHeading } from "@/components/admin/page-heading";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -7,6 +12,8 @@ import { deliveryRegions } from "@/data/mock-store";
 import { formatCurrency } from "@/lib/utils";
 
 export default function DeliverySettingsPage() {
+  const tenant = useTenant();
+  if (tenant.mode === "live") return <LiveDeliveryPage />;
   return (
     <div>
       <PageHeading

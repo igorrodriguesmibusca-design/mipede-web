@@ -1,11 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
+import { LiveProductForm } from "@/components/admin/live-product-form";
 import { PageHeading } from "@/components/admin/page-heading";
 import { ProductForm } from "@/components/admin/product-form";
 import { routes } from "@/lib/routes";
+import { useTenant } from "@/lib/tenant-context";
 
 export default function NewProductPage() {
+  const tenant = useTenant();
   return (
     <div>
       <Link
@@ -17,9 +22,9 @@ export default function NewProductPage() {
       </Link>
       <PageHeading
         title="Novo produto"
-        description="Cadastro visual demonstrativo. Nenhum dado é persistido."
+        description={tenant.mode === "live" ? "Cadastre um item do cardápio da sua loja." : "Cadastro visual demonstrativo. Nenhum dado é persistido."}
       />
-      <ProductForm />
+      {tenant.mode === "live" ? <LiveProductForm /> : <ProductForm />}
     </div>
   );
 }
