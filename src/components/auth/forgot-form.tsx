@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null;
 
 export function ForgotForm() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,7 +25,7 @@ export function ForgotForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email: String(form.get("email") ?? ""),
-          turnstileToken: "dev-bypass",
+          turnstileToken,
         }),
       });
       if (response.status === 503) {
@@ -50,6 +54,7 @@ export function ForgotForm() {
         <span className="text-sm font-medium">E-mail</span>
         <Input name="email" type="email" required autoComplete="email" />
       </label>
+      <TurnstileField siteKey={siteKey} onToken={setTurnstileToken} />
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <Button type="submit" disabled={pending} className="h-11 w-full rounded-xl">
         {pending ? "Enviando..." : "Enviar instruções"}

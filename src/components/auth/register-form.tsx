@@ -4,14 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PasswordField } from "@/components/auth/password-field";
+import { TurnstileField } from "@/components/auth/turnstile-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { routes } from "@/lib/routes";
+
+const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null;
 
 export function RegisterForm() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -27,7 +31,7 @@ export function RegisterForm() {
       confirmPassword,
       acceptTerms: form.get("acceptTerms") === "on",
       acceptPrivacy: form.get("acceptPrivacy") === "on",
-      turnstileToken: String(form.get("turnstileToken") || "dev-bypass"),
+      turnstileToken,
     };
 
     setPending(true);
@@ -97,7 +101,7 @@ export function RegisterForm() {
         <input name="acceptPrivacy" type="checkbox" required className="mt-1" />
         <span>Aceito a Política de Privacidade</span>
       </label>
-      <input type="hidden" name="turnstileToken" value="dev-bypass" />
+      <TurnstileField siteKey={siteKey} onToken={setTurnstileToken} />
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <Button type="submit" disabled={pending} className="h-11 w-full rounded-xl">
         {pending ? "Enviando..." : "Criar cadastro"}
