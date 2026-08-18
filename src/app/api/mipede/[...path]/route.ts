@@ -1,4 +1,5 @@
 import { BFF_ALLOWED_METHODS, BFF_MAX_BODY_BYTES, BFF_SECRET_HEADER, BFF_TIMEOUT_MS, bffSharedSecret, isAllowedBffPath } from "@/server/bff";
+import { appendSetCookies, cookieHeaderPresent, oauthQueryFlags, readSetCookies } from "@/server/cookie-headers";
 import { controlApiUrl } from "@/server/config";
 
 export const dynamic = "force-dynamic";
@@ -55,11 +56,13 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   }
 
   const incoming = new URL(request.url);
-  const target = `${base.replace(/\/$/, "")}/api/mipede/${path.join("/")}${incoming.search}`;
+  const pathname = `/api/mipede/${path.join("/")}`;
+  const target = `${base.replace(/\/$/, "")}${pathname}${incoming.search}`;
   if (!target.startsWith(`${base.replace(/\/$/, "")}/api/mipede/`)) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
+  const flags = oauthQueryFlags(incoming.search);
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     if (!STRIP_REQUEST.has(key.toLowerCase())) headers.set(key, value);
@@ -67,6 +70,7 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   headers.set(BFF_SECRET_HEADER, shared);
   headers.set("x-forwarded-host", incoming.host);
   headers.set("x-forwarded-proto", incoming.protocol.replace(":", ""));
+  headers.set("x-mipede-public-origin", `${incoming.protocol}//${incoming.host}`);
 
   let body: ArrayBuffer | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -100,17 +104,26 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
     if (!STRIP_RESPONSE.has(key.toLowerCase())) outgoing.set(key, value);
   });
 
-  const response = new Response(upstream.body, {
+  const cookies = readSetCookies(upstream.headers);
+  appendSetCookies(outgoing, cookies);
+
+  if (pathname.startsWith("/api/mipede/auth/")) {
+    outgoing.set(
+      "x-mipede-oauth-trace",
+      [
+        `env=${process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "unknown"}`,
+        `cookie=${cookieHeaderPresent(request.headers) ? "1" : "0"}`,
+        `set-cookie=${cookies.length}`,
+        `state=${flags.hasState ? "1" : "0"}`,
+        `code=${flags.hasCode ? "1" : "0"}`,
+      ].join(";"),
+    );
+  }
+
+  return new Response(upstream.body, {
     status: upstream.status,
     headers: outgoing,
   });
-
-  const cookies = upstream.headers.getSetCookie?.() ?? [];
-  for (const cookie of cookies) {
-    response.headers.append("set-cookie", cookie);
-  }
-
-  return response;
 }
 
 export const GET = proxy;

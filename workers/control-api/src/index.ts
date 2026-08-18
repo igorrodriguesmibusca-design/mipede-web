@@ -74,6 +74,25 @@ function trustedOrigins(env: ControlEnv): string[] {
     .filter((item) => item && item !== "*" && !item.includes("*"));
 }
 
+function publicAuthRequest(request: Request, env: ControlEnv, incoming: URL): Request {
+  const origin =
+    request.headers.get("x-mipede-public-origin") ||
+    env.BETTER_AUTH_URL ||
+    env.APP_PUBLIC_URL ||
+    "https://mipede-web.vercel.app";
+  const publicUrl = new URL(`${incoming.pathname}${incoming.search}`, origin.endsWith("/") ? origin : `${origin}/`);
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers: request.headers,
+    redirect: "manual",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD" && request.body) {
+    init.body = request.body;
+    init.duplex = "half";
+  }
+  return new Request(publicUrl.toString(), init);
+}
+
 function hasValidBffSecret(request: Request, env: ControlEnv): boolean {
   const expected = env.MIPEDE_BFF_SHARED_SECRET;
   if (!expected) return env.ENVIRONMENT === "development";
@@ -353,28 +372,12 @@ export default {
       if (body.acceptTerms !== true || body.acceptPrivacy !== true) {
         return json({ error: "terms_required" }, 400);
       }
-      const auth = createAuth(env);
-      if (!auth) return json({ error: "auth_unavailable" }, 503);
-      try {
-        const result = await auth.api.signInSocial({
-          body: {
-            provider: "google",
-            callbackURL: "/auth/continuar",
-            errorCallbackURL: "/entrar",
-          },
-          headers: request.headers,
-        });
-        const url = result && typeof result === "object" && "url" in result ? String(result.url ?? "") : "";
-        if (!url) return json({ error: "google_unavailable" }, 503);
-        const headers = new Headers({ "content-type": "application/json; charset=utf-8" });
-        headers.append(
-          "set-cookie",
-          `${TERMS_INTENT_COOKIE}=${TERMS_VERSION}|${PRIVACY_VERSION}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${TERMS_INTENT_MAX_AGE}`,
-        );
-        return new Response(JSON.stringify({ url }), { status: 200, headers });
-      } catch {
-        return json({ error: "google_unavailable" }, 503);
-      }
+      const headers = new Headers({ "content-type": "application/json; charset=utf-8" });
+      headers.append(
+        "set-cookie",
+        `${TERMS_INTENT_COOKIE}=${TERMS_VERSION}|${PRIVACY_VERSION}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${TERMS_INTENT_MAX_AGE}`,
+      );
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
     }
 
     if (url.pathname === "/api/mipede/v1/auth/destination" && request.method === "GET") {
@@ -461,7 +464,7 @@ export default {
     if (url.pathname.startsWith("/api/mipede/auth/")) {
       const auth = createAuth(env);
       if (!auth) return json({ error: "auth_unavailable" }, 503);
-      return auth.handler(request);
+      return auth.handler(publicAuthRequest(request, env, url));
     }
 
     if (url.pathname === "/api/mipede/v1/register" && request.method === "POST") {
