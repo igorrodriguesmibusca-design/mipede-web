@@ -5,7 +5,9 @@ Decisão oficial da plataforma. Clerk e Supabase **não** fazem parte da arquite
 ## Situação atual
 
 - O frontend Next.js continua hospedado na **Vercel**.
-- Esta etapa é um protótipo visual. Nenhum Worker, D1, R2, Durable Object, Queue ou Turnstile está provisionado.
+- O código do Worker de controle (`workers/control-api`) e a migration do D1 `mipede-control` existem no repositório.
+- O Worker, o D1, o Resend e o Turnstile **ainda não foram provisionados** na conta Cloudflare. Sem isso o BFF responde 503.
+- `/preview` e o painel visual da Pizzaria Imperial permanecem disponíveis só em demonstração explícita.
 
 ## Frontend
 
@@ -54,9 +56,12 @@ Poderá proteger ações públicas sensíveis. Não implementado agora.
 ## Autenticação
 
 - Consumidor **não** cria conta, e-mail ou senha.
-- Autenticação de funcionários, administradores e operadores **ainda será definida**.
+- Responsáveis, administradores e operadores autenticam com **Better Auth 1.6.29** no Worker, banco D1 `mipede-control`.
 - Identificação do consumidor não se confunde com login operacional.
+- Detalhes: `docs/authentication-architecture.md`.
 
 ## Isolamento
 
-Todos os dados são isolados por `store_id`.
+Controle global em `mipede-control`. Dados operacionais futuros em `mipede-store-{storeUuid}`.
+
+O tenant é resolvido no servidor a partir da sessão. `storeId` enviado pelo navegador não autoriza acesso. Ver `docs/tenant-isolation.md`.
