@@ -1,14 +1,14 @@
-import { Suspense } from "react";
+import Link from "next/link";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import { ResetForm } from "@/components/auth/reset-form";
+import { routes } from "@/lib/routes";
 
 export default function ResetPasswordPage() {
   return (
-    <AuthShell title="Redefinir senha" description="Escolha uma senha nova. As sessões anteriores serão encerradas.">
-      <Suspense>
-        <ResetForm />
-      </Suspense>
+    <AuthShell title="Redefinir senha" description="O acesso com e-mail e senha estará disponível futuramente.">
+      <Link href={routes.auth.login} className="text-sm font-medium text-brand hover:underline">
+        Entrar com Google
+      </Link>
     </AuthShell>
   );
 }

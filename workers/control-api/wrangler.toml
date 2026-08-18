@@ -5,6 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "development"
+MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED = "0"
+MIPEDE_GOOGLE_AUTH_ENABLED = "1"
 
 [[d1_databases]]
 binding = "DB"
@@ -19,6 +21,8 @@ name = "mipede-control-api-staging"
 ENVIRONMENT = "staging"
 BETTER_AUTH_URL = "https://mipede-web.vercel.app"
 APP_PUBLIC_URL = "https://mipede-web.vercel.app"
+MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED = "0"
+MIPEDE_GOOGLE_AUTH_ENABLED = "1"
 
 [[env.staging.d1_databases]]
 binding = "DB"
@@ -33,6 +37,8 @@ name = "mipede-control-api"
 ENVIRONMENT = "production"
 BETTER_AUTH_URL = "https://mipede-web.vercel.app"
 APP_PUBLIC_URL = "https://mipede-web.vercel.app"
+MIPEDE_EMAIL_PASSWORD_AUTH_ENABLED = "0"
+MIPEDE_GOOGLE_AUTH_ENABLED = "1"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -48,3 +54,5 @@ migrations_dir = "migrations"
 # TRUSTED_ORIGINS
 # MIPEDE_BFF_SHARED_SECRET
 # RESEND_FROM_EMAIL
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
