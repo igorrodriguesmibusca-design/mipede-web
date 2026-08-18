@@ -1,18 +1,50 @@
 name = "mipede-control-api"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "mipede-control"
-database_id = "REPLACE_AFTER_PROVISIONING"
+database_name = "mipede-control-staging"
+database_id = "826e13c2-03c4-4331-9608-fc9b2c79cd01"
+migrations_dir = "migrations"
 
-# Secrets (wrangler secret put) — nunca versionar valores:
+[env.staging]
+name = "mipede-control-api-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+BETTER_AUTH_URL = "https://mipede-web.vercel.app"
+APP_PUBLIC_URL = "https://mipede-web.vercel.app"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "mipede-control-staging"
+database_id = "826e13c2-03c4-4331-9608-fc9b2c79cd01"
+migrations_dir = "migrations"
+
+[env.production]
+name = "mipede-control-api"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+BETTER_AUTH_URL = "https://mipede-web.vercel.app"
+APP_PUBLIC_URL = "https://mipede-web.vercel.app"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "mipede-control-production"
+database_id = "ff783a90-3443-443f-bbd2-5ac7a184331b"
+migrations_dir = "migrations"
+
+# Secrets via wrangler secret put --env staging|production
 # BETTER_AUTH_SECRET
 # RESEND_API_KEY
 # TURNSTILE_SECRET_KEY
 # PLATFORM_ADMIN_EMAILS
 # TRUSTED_ORIGINS
-# BETTER_AUTH_URL
+# MIPEDE_BFF_SHARED_SECRET
 # RESEND_FROM_EMAIL
-# ALLOW_TEST_EMAIL_BYPASS (somente local/teste)

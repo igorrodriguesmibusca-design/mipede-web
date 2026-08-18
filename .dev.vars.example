@@ -1,10 +1,13 @@
 # Cloudflare Worker local (wrangler). Nunca commitar .dev.vars com valores reais.
 
+ENVIRONMENT=development
 BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=http://localhost:3000
+APP_PUBLIC_URL=http://localhost:3000
 RESEND_API_KEY=
-RESEND_FROM_EMAIL=MiPede <nao-responda@mipede.app>
+RESEND_FROM_EMAIL=
 TURNSTILE_SECRET_KEY=
 PLATFORM_ADMIN_EMAILS=
 TRUSTED_ORIGINS=http://localhost:3000
+MIPEDE_BFF_SHARED_SECRET=
 ALLOW_TEST_EMAIL_BYPASS=1

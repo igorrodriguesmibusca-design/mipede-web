@@ -28,12 +28,15 @@ export interface ControlEnv {
   DB: D1Database;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  APP_PUBLIC_URL?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   TURNSTILE_SECRET_KEY?: string;
   PLATFORM_ADMIN_EMAILS?: string;
   TRUSTED_ORIGINS?: string;
+  MIPEDE_BFF_SHARED_SECRET?: string;
   ALLOW_TEST_EMAIL_BYPASS?: string;
+  ENVIRONMENT?: string;
 }
 
 const limiter = new MemoryRateLimiter(8, 60_000);
@@ -45,11 +48,29 @@ function json(data: unknown, status = 200, headers: HeadersInit = {}) {
   });
 }
 
+function timingSafeEqual(left: string, right: string): boolean {
+  const encoder = new TextEncoder();
+  const a = encoder.encode(left);
+  const b = encoder.encode(right);
+  const length = Math.max(a.length, b.length);
+  let diff = a.length === b.length ? 0 : 1;
+  for (let index = 0; index < length; index += 1) {
+    diff |= (a[index] ?? 0) ^ (b[index] ?? 0);
+  }
+  return diff === 0;
+}
+
 function trustedOrigins(env: ControlEnv): string[] {
   return (env.TRUSTED_ORIGINS ?? "http://localhost:3000")
     .split(",")
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => item && item !== "*" && !item.includes("*"));
+}
+
+function hasValidBffSecret(request: Request, env: ControlEnv): boolean {
+  const expected = env.MIPEDE_BFF_SHARED_SECRET;
+  if (!expected) return env.ENVIRONMENT === "development";
+  return timingSafeEqual(request.headers.get("x-mipede-bff-secret") ?? "", expected);
 }
 
 function isTrustedOrigin(env: ControlEnv, request: Request): boolean {
@@ -116,7 +137,7 @@ function createAuth(env: ControlEnv) {
 
   return betterAuth({
     secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL ?? "http://localhost:3000",
+    baseURL: env.BETTER_AUTH_URL ?? env.APP_PUBLIC_URL ?? "http://localhost:3000",
     basePath: "/api/mipede/auth",
     trustedOrigins: trustedOrigins(env),
     database: {
@@ -267,10 +288,13 @@ export default {
       return json({
         ok: true,
         service: "mipede-control",
-        configured: Boolean(env.BETTER_AUTH_SECRET),
-        email: Boolean(env.RESEND_API_KEY),
-        turnstile: Boolean(env.TURNSTILE_SECRET_KEY),
+        version: "07.1",
+        environment: env.ENVIRONMENT ?? "unknown",
       });
+    }
+
+    if (!hasValidBffSecret(request, env)) {
+      return json({ error: "forbidden" }, 403);
     }
 
     if (!env.BETTER_AUTH_SECRET) {
