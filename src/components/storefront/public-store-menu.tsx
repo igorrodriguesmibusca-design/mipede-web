@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Clock3, MapPin, Share2 } from "lucide-react";
 
 import { MipedeMark } from "@/components/brand/mipede-mark";
+import { storefrontPath } from "@/lib/routes";
 import { formatCurrency } from "@/lib/utils";
 
 type PublicMenu = {
@@ -140,7 +142,11 @@ export function PublicStoreMenu({ slug }: { slug: string }) {
         ) : (
           <div className="mt-4 space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0 lg:grid-cols-4">
             {products.map((product) => (
-              <article key={product.id} className="rounded-2xl border border-zinc-100 bg-white p-3">
+              <Link
+                key={product.id}
+                href={`${storefrontPath(slug)}/produto/${product.id}`}
+                className="block rounded-2xl border border-zinc-100 bg-white p-3 text-left hover:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
                 {product.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={product.imageUrl} alt="" className="mb-3 h-32 w-full rounded-xl object-cover" />
@@ -157,7 +163,7 @@ export function PublicStoreMenu({ slug }: { slug: string }) {
                     formatCurrency(product.priceCents / 100)
                   )}
                 </p>
-              </article>
+              </Link>
             ))}
           </div>
         )}
