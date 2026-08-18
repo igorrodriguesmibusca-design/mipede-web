@@ -8,6 +8,7 @@ import {
   normalizeCouponCode,
   sniffImageMime,
 } from "../../../src/server/catalog-policy";
+import { groupHasEnoughOptions, validateComplementRules } from "../../../src/lib/complement-rules";
 import { reaisToCents, slugifyName } from "../../../src/server/onboarding-store";
 import {
   categoryWriteSchema,
@@ -177,7 +178,11 @@ export async function handleAppApi(
 ): Promise<Response | null> {
   const path = url.pathname.replace(/\/$/, "");
 
-  if (path.startsWith("/api/mipede/v1/public/menu/")) {
+  const publicProductMatch = path.match(/^\/api\/mipede\/v1\/public\/menu\/([^/]+)\/products\/([^/]+)$/);
+  if (publicProductMatch && request.method === "GET") {
+    return publicProduct(env, publicProductMatch[1], publicProductMatch[2], url.searchParams.get("preview") === "1" ? context : null);
+  }
+  if (path.startsWith("/api/mipede/v1/public/menu/") && request.method === "GET") {
     return publicMenu(env, path.split("/").at(-1) ?? "", url.searchParams.get("preview") === "1" ? context : null);
   }
   if (path.startsWith("/api/mipede/v1/media/") && request.method === "GET") {
@@ -255,13 +260,17 @@ export async function handleAppApi(
     if (request.method === "GET") return listGroups(db, member.storeId);
     if (request.method === "POST") {
       if (!requireWrite(context, "catalog")) return friendly("forbidden", 403);
-      return createGroup(db, member.storeId, await readBody(request));
+      const created = await createGroup(db, member.storeId, await readBody(request));
+      if (created.ok) await logCatalogAudit(env, context.userId, member.storeId, "complement_group_created");
+      return created;
     }
   }
   const groupMatch = path.match(/^\/api\/mipede\/v1\/catalog\/complements\/([^/]+)$/);
   if (groupMatch && request.method === "PATCH") {
     if (!requireWrite(context, "catalog")) return friendly("forbidden", 403);
-    return updateGroup(db, member.storeId, groupMatch[1], await readBody(request));
+    const updated = await updateGroup(db, member.storeId, groupMatch[1], await readBody(request));
+    if (updated.ok) await logCatalogAudit(env, context.userId, member.storeId, "complement_group_updated");
+    return updated;
   }
   if (path.match(/^\/api\/mipede\/v1\/catalog\/complements\/[^/]+\/archive$/) && request.method === "POST") {
     if (!requireWrite(context, "catalog")) return friendly("forbidden", 403);
@@ -412,7 +421,15 @@ async function listProducts(db: D1Database, storeId: string) {
     )
     .bind(storeId)
     .all();
-  return json({ products: rows.results ?? [] });
+  const links = await db.prepare(`SELECT product_id as productId, group_id as groupId FROM product_complement_groups WHERE store_id = ?`).bind(storeId).all<{ productId: string; groupId: string }>();
+  return json({
+    products: (rows.results ?? []).map((product) => ({
+      ...product,
+      complementGroupIds: (links.results ?? [])
+        .filter((link) => link.productId === (product as { id: string }).id)
+        .map((link) => link.groupId),
+    })),
+  });
 }
 
 async function createProduct(db: D1Database, storeId: string, body: Record<string, unknown>) {
@@ -447,7 +464,8 @@ async function createProduct(db: D1Database, storeId: string, body: Record<strin
       now,
     )
     .run();
-  await linkGroups(db, storeId, id, parsed.data.complementGroupIds ?? []);
+  const linked = await linkGroups(db, storeId, id, parsed.data.complementGroupIds ?? []);
+  if (linked) return linked;
   return json({ ok: true, id });
 }
 
@@ -485,7 +503,10 @@ async function updateProduct(db: D1Database, storeId: string, id: string, body: 
       storeId,
     )
     .run();
-  if (parsed.data.complementGroupIds) await linkGroups(db, storeId, id, parsed.data.complementGroupIds);
+  if (parsed.data.complementGroupIds) {
+    const linked = await linkGroups(db, storeId, id, parsed.data.complementGroupIds);
+    if (linked) return linked;
+  }
   return json({ ok: true });
 }
 
@@ -502,7 +523,8 @@ async function duplicateProduct(db: D1Database, storeId: string, id: string) {
     .bind(nextId, storeId, row.category_id, `${String(row.name)} (cópia)`, row.description, row.price_cents, row.promo_price_cents, row.image_key, 0, 0, row.sort_order, now, now)
     .run();
   const links = await db.prepare(`SELECT group_id FROM product_complement_groups WHERE store_id = ? AND product_id = ?`).bind(storeId, id).all<{ group_id: string }>();
-  await linkGroups(db, storeId, nextId, (links.results ?? []).map((item) => item.group_id));
+  const linked = await linkGroups(db, storeId, nextId, (links.results ?? []).map((item) => item.group_id));
+  if (linked) return linked;
   return json({ ok: true, id: nextId });
 }
 
@@ -510,14 +532,25 @@ async function linkGroups(db: D1Database, storeId: string, productId: string, gr
   await db.prepare(`DELETE FROM product_complement_groups WHERE store_id = ? AND product_id = ?`).bind(storeId, productId).run();
   let order = 0;
   for (const groupId of groupIds) {
-    const group = await db.prepare(`SELECT id FROM complement_groups WHERE id = ? AND store_id = ? AND archived_at IS NULL`).bind(groupId, storeId).first();
-    if (!group) continue;
+    const group = await db
+      .prepare(
+        `SELECT id, min_select as minSelect,
+                (SELECT COUNT(*) FROM complement_options o WHERE o.group_id = complement_groups.id AND o.store_id = complement_groups.store_id AND o.archived_at IS NULL AND o.active = 1) as activeOptions
+         FROM complement_groups WHERE id = ? AND store_id = ? AND archived_at IS NULL`,
+      )
+      .bind(groupId, storeId)
+      .first<{ id: string; minSelect: number; activeOptions: number }>();
+    if (!group) return friendly("not_found", 404);
+    if (!groupHasEnoughOptions(group.minSelect, group.activeOptions)) {
+      return json({ error: "group_not_ready", message: "Este grupo ainda não tem opções suficientes para o mínimo configurado." }, 400);
+    }
     await db
       .prepare(`INSERT INTO product_complement_groups (store_id, product_id, group_id, sort_order) VALUES (?, ?, ?, ?)`)
       .bind(storeId, productId, groupId, order)
       .run();
     order += 1;
   }
+  return null;
 }
 
 async function listGroups(db: D1Database, storeId: string) {
@@ -551,8 +584,9 @@ async function createGroup(db: D1Database, storeId: string, body: Record<string,
   const parsed = complementGroupWriteSchema.safeParse(body);
   if (!parsed.success) return friendly("invalid_input");
   const minSelect = parsed.data.minSelect ?? (parsed.data.required ? 1 : 0);
-  const maxSelect = parsed.data.maxSelect ?? Math.max(minSelect, 1);
-  if (maxSelect < minSelect) return friendly("invalid_input");
+  const maxSelect = parsed.data.maxSelect ?? 1;
+  const invalid = validateComplementRules({ required: Boolean(parsed.data.required), minSelect, maxSelect });
+  if (invalid) return json({ error: "invalid_input", message: invalid.message, field: invalid.field }, 400);
   const id = crypto.randomUUID();
   const now = Date.now();
   await db
@@ -568,8 +602,16 @@ async function createGroup(db: D1Database, storeId: string, body: Record<string,
 async function updateGroup(db: D1Database, storeId: string, id: string, body: Record<string, unknown>) {
   const parsed = complementGroupWriteSchema.partial().safeParse(body);
   if (!parsed.success) return friendly("invalid_input");
-  const current = await db.prepare(`SELECT id FROM complement_groups WHERE id = ? AND store_id = ? AND archived_at IS NULL`).bind(id, storeId).first();
+  const current = await db
+    .prepare(`SELECT id, required, min_select as minSelect, max_select as maxSelect FROM complement_groups WHERE id = ? AND store_id = ? AND archived_at IS NULL`)
+    .bind(id, storeId)
+    .first<{ id: string; required: number; minSelect: number; maxSelect: number }>();
   if (!current) return friendly("not_found", 404);
+  const nextRequired = parsed.data.required ?? Boolean(current.required);
+  const nextMin = parsed.data.minSelect ?? current.minSelect;
+  const nextMax = parsed.data.maxSelect ?? current.maxSelect;
+  const invalid = validateComplementRules({ required: nextRequired, minSelect: nextMin, maxSelect: nextMax });
+  if (invalid) return json({ error: "invalid_input", message: invalid.message, field: invalid.field }, 400);
   await db
     .prepare(
       `UPDATE complement_groups SET name = COALESCE(?, name), required = COALESCE(?, required), min_select = COALESCE(?, min_select),
@@ -1001,6 +1043,7 @@ async function publicMenu(env: AppEnv, slug: string, previewContext: AuthContext
           id: (group as { id: string }).id,
           name: (group as { name: string }).name,
           required: Boolean((group as { required: number }).required),
+          type: (group as { required: number }).required ? "required" : "optional",
           minSelect: (group as { minSelect: number }).minSelect,
           maxSelect: (group as { maxSelect: number }).maxSelect,
           options: (options.results ?? []).filter((option) => (option as { groupId: string }).groupId === (group as { id: string }).id),
@@ -1008,6 +1051,29 @@ async function publicMenu(env: AppEnv, slug: string, previewContext: AuthContext
     })),
     emptyMessage: "Este cardápio ainda não possui itens disponíveis.",
   });
+}
+
+async function publicProduct(env: AppEnv, slug: string, productId: string, previewContext: AuthContext | null) {
+  const menu = await publicMenu(env, slug, previewContext);
+  if (!menu.ok) return menu;
+  const payload = (await menu.json()) as {
+    comingSoon?: boolean;
+    products?: Array<Record<string, unknown> & { id: string }>;
+  };
+  if (payload.comingSoon) return json({ error: "not_found", message: "Produto indisponível" }, 404);
+  const product = (payload.products ?? []).find((item) => item.id === productId);
+  if (!product) return json({ error: "not_found", message: "Produto indisponível" }, 404);
+  return json({ product });
+}
+
+async function logCatalogAudit(env: AppEnv, actorId: string, storeId: string, action: string) {
+  await env.DB.prepare(
+    `INSERT INTO audit_logs (id, actor_user_id, organization_id, store_id, action, resource_type, resource_id, metadata_safe, ip_hash, user_agent_summary, created_at)
+     VALUES (?, ?, NULL, ?, ?, 'catalog', ?, NULL, NULL, NULL, ?)`,
+  )
+    .bind(crypto.randomUUID(), actorId, storeId, action, storeId, Date.now())
+    .run()
+    .catch(() => undefined);
 }
 
 export function publicStoreSlugFromName(name: string) {

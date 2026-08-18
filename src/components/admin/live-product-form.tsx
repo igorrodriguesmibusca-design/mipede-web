@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Toast } from "@/components/ui/toast";
 import { adminJson, moneyFromInput } from "@/lib/admin-api";
+import { groupHasEnoughOptions } from "@/lib/complement-rules";
 import { routes } from "@/lib/routes";
 
 export function LiveProductForm() {
@@ -16,7 +17,9 @@ export function LiveProductForm() {
   const editingId = search.get("id");
   const [toast, setToast] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
-  const [groups, setGroups] = useState<Array<{ id: string; name: string }>>([]);
+  const [groups, setGroups] = useState<
+    Array<{ id: string; name: string; minSelect: number; options?: Array<{ active: number }> }>
+  >([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -31,13 +34,44 @@ export function LiveProductForm() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    void adminJson<{ categories: Array<{ id: string; name: string }> }>("/api/mipede/v1/catalog/categories").then((payload) =>
-      setCategories(payload.categories ?? []),
-    );
-    void adminJson<{ groups: Array<{ id: string; name: string }> }>("/api/mipede/v1/catalog/complements").then((payload) =>
-      setGroups(payload.groups ?? []),
-    );
-  }, []);
+    void fetch("/api/mipede/v1/catalog/categories", { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : { categories: [] }))
+      .then((payload: { categories?: Array<{ id: string; name: string }> }) => setCategories(payload.categories ?? []));
+    void fetch("/api/mipede/v1/catalog/complements", { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : { groups: [] }))
+      .then((payload: { groups?: Array<{ id: string; name: string; minSelect: number; options?: Array<{ active: number }> }> }) =>
+        setGroups(payload.groups ?? []),
+      );
+    if (!editingId) return;
+    void fetch("/api/mipede/v1/catalog/products", { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : { products: [] }))
+      .then(
+        (payload: {
+          products?: Array<{
+            id: string;
+            name: string;
+            description?: string;
+            categoryId: string;
+            priceCents: number;
+            promoPriceCents?: number | null;
+            active: number;
+            featured: number;
+            complementGroupIds?: string[];
+          }>;
+        }) => {
+          const current = payload.products?.find((item) => item.id === editingId);
+          if (!current) return;
+          setName(current.name);
+          setDescription(current.description ?? "");
+          setCategoryId(current.categoryId);
+          setPrice((current.priceCents / 100).toFixed(2).replace(".", ","));
+          setPromo(current.promoPriceCents ? (current.promoPriceCents / 100).toFixed(2).replace(".", ",") : "");
+          setActive(Boolean(current.active));
+          setFeatured(Boolean(current.featured));
+          setLinked(current.complementGroupIds ?? []);
+        },
+      );
+  }, [editingId]);
 
   async function upload(file: File) {
     const body = new FormData();
@@ -129,16 +163,34 @@ export function LiveProductForm() {
         <h2 className="mb-3 font-semibold">Grupos de complementos</h2>
         <div className="space-y-2">
           {groups.length === 0 ? <p className="text-sm text-subtle">Nenhum grupo criado ainda.</p> : null}
-          {groups.map((group) => (
-            <label key={group.id} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={linked.includes(group.id)}
-                onChange={(event) => setLinked((current) => event.target.checked ? [...current, group.id] : current.filter((id) => id !== group.id))}
-              />
-              {group.name}
-            </label>
-          ))}
+          {groups.map((group) => {
+            const ready = groupHasEnoughOptions(group.minSelect ?? 0, (group.options ?? []).filter((option) => option.active).length);
+            return (
+              <label key={group.id} className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={linked.includes(group.id)}
+                  disabled={!ready}
+                  onChange={(event) =>
+                    setLinked((current) =>
+                      event.target.checked ? [...current, group.id] : current.filter((id) => id !== group.id),
+                    )
+                  }
+                />
+                <span>
+                  <span className="font-medium">{group.name}</span>
+                  {!ready ? (
+                    <span className="mt-0.5 block text-xs text-amber-700">
+                      Cadastre opções suficientes antes de vincular este grupo.
+                    </span>
+                  ) : linked.includes(group.id) ? (
+                    <span className="mt-0.5 block text-xs text-subtle">Vinculado a este produto.</span>
+                  ) : null}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </section>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

@@ -149,6 +149,8 @@ const AUDIT_EVENT_MAP: Record<string, string> = {
   register: "Conta criada",
   store_archived_duplicate: "Cadastro duplicado arquivado",
   stores_provisioned: "Estrutura das lojas provisionada",
+  complement_group_created: "Grupo de complementos criado",
+  complement_group_updated: "Regras do grupo de complementos atualizadas",
 };
 
 export function auditEventLabel(action: string | null | undefined): string {

@@ -13,6 +13,8 @@ A autenticação continua no D1 de controle (`mipede-control-*`). O cardápio, a
 
 O `store_id` nunca autoriza acesso se vier do navegador. O Worker resolve a loja pela sessão e pelo membership.
 
+O carrinho público é temporário e fica no navegador, separado por loja. Preços enviados pelo cliente não são confiáveis: ao criar um pedido no futuro, o servidor deve recalcular o total com os preços atuais do APP_DB.
+
 ## Onboarding
 
 O cadastro público reutiliza a loja existente do usuário. Só um estabelecimento `public_onboarding` ativo por proprietário. Novas lojas no futuro exigem um fluxo explícito “Adicionar estabelecimento”.
