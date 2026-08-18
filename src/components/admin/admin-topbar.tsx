@@ -1,11 +1,14 @@
+import { useRouter } from "next/navigation";
 import { Bell, Menu, Share2 } from "lucide-react";
 
 import { MipedeLogo } from "@/components/brand/mipede-mark";
 import { store } from "@/data/mock-store";
+import { routes } from "@/lib/routes";
 import { useTenant } from "@/lib/tenant-context";
 
 export function AdminTopbar({ onMenu }: { onMenu?: () => void }) {
   const tenant = useTenant();
+  const router = useRouter();
   const storeName = tenant.mode === "live" ? (tenant.store?.name ?? "Sua loja") : store.name;
   const storeStatus =
     tenant.mode === "live"
@@ -35,6 +38,20 @@ export function AdminTopbar({ onMenu }: { onMenu?: () => void }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
+        {tenant.mode === "live" ? (
+          <button
+            type="button"
+            className="rounded-full border border-zinc-200 px-3 py-2 text-xs font-semibold"
+            onClick={() => {
+              void fetch("/api/mipede/auth/sign-out", { method: "POST", credentials: "include" }).then(() => {
+                router.push(routes.auth.login);
+                router.refresh();
+              });
+            }}
+          >
+            Sair
+          </button>
+        ) : null}
         <span
           aria-label="Notificações"
           className="relative flex size-10 items-center justify-center rounded-full border border-zinc-200"
