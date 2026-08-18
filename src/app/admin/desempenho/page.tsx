@@ -2,11 +2,11 @@ import { Banknote, ShoppingBag, Ticket, Users } from "lucide-react";
 
 import { LineChart } from "@/components/admin/line-chart";
 import { PageHeading } from "@/components/admin/page-heading";
+import { PerformanceTabs } from "@/components/admin/performance-tabs";
 import { StatCard } from "@/components/admin/stat-card";
 import { performanceMetrics } from "@/data/mock-tracking";
 import { formatCurrency } from "@/lib/utils";
 
-const tabs = ["Vendas", "Itens", "Funil de Vendas", "Marketing", "Clientes", "Cancelamentos"];
 const ranges = ["Hoje", "Últimos 7 dias", "30 dias"];
 
 export default function PerformancePage() {
@@ -18,20 +18,7 @@ export default function PerformancePage() {
       />
 
       <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex gap-1 overflow-x-auto rounded-xl bg-zinc-100 p-1">
-          {tabs.map((tab, index) => (
-            <span
-              key={tab}
-              className={
-                index === 0
-                  ? "shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-brand"
-                  : "shrink-0 px-3 py-1.5 text-sm text-zinc-500"
-              }
-            >
-              {tab}
-            </span>
-          ))}
-        </div>
+        <PerformanceTabs />
         <div className="flex gap-1 rounded-xl bg-zinc-100 p-1">
           {ranges.map((range) => (
             <span

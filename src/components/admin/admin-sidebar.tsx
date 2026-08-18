@@ -114,8 +114,15 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         const Icon = section.icon;
         const hasChildren = Boolean(section.items?.length);
         const isOpen = openId === section.id;
-        const childActive = section.items?.some((item) => pathname === item.href) ?? false;
-        const directActive = section.href ? pathname === section.href : false;
+        const childActive =
+          (section.items?.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)) ??
+            false) ||
+          (section.id === "marketing" && pathname.startsWith("/admin/marketing/cupons"));
+        const directActive = section.href
+          ? section.id === "desempenho"
+            ? pathname.startsWith("/admin/desempenho")
+            : pathname === section.href
+          : false;
 
         return (
           <div key={section.id} className="rounded-2xl bg-zinc-50 p-2">
