@@ -4,7 +4,9 @@ Cardápio digital próprio para estabelecimentos com entrega própria.
 
 O frontend visual continua na Vercel. Esta etapa adiciona a fundação funcional: cadastro de restaurantes, Better Auth no Worker, D1 de controle, onboarding e isolamento entre lojas.
 
-O Worker/D1/Resend/Turnstile **ainda precisam ser provisionados**. Sem isso o BFF `/api/mipede/*` responde 503 e o painel visual da Pizzaria Imperial permanece só como demonstração.
+Worker e D1 de staging/produção estão no ar. O BFF da Vercel fala com o Worker por um segredo compartilhado. Produção não usa modo demonstração.
+
+O envio de e-mail (verificação e senha) ainda depende do Resend com domínio verificado.
 
 ## Loja do protótipo
 

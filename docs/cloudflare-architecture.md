@@ -5,9 +5,10 @@ Decisão oficial da plataforma. Clerk e Supabase **não** fazem parte da arquite
 ## Situação atual
 
 - O frontend Next.js continua hospedado na **Vercel**.
-- O código do Worker de controle (`workers/control-api`) e a migration do D1 `mipede-control` existem no repositório.
-- O Worker, o D1, o Resend e o Turnstile **ainda não foram provisionados** na conta Cloudflare. Sem isso o BFF responde 503.
-- `/preview` e o painel visual da Pizzaria Imperial permanecem disponíveis só em demonstração explícita.
+- O Worker de controle e os D1 de staging/produção estão provisionados. Ver `docs/deploy-infrastructure.md`.
+- Resend ainda não tem domínio/API key. O envio de e-mail permanece bloqueado até essa configuração.
+- Turnstile está ativo no Worker. A site key pública vai na Vercel.
+- Produção usa `MIPEDE_ALLOW_DEMO=0`. Preview/dev ainda podem manter o protótipo visual.
 
 ## Frontend
 
