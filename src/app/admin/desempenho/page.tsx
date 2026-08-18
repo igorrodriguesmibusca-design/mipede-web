@@ -83,8 +83,8 @@ export default function PerformancePage() {
         />
       </div>
 
-      <section className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-        <div className="mb-3 flex gap-4 overflow-x-auto text-sm">
+      <section className="rounded-2xl border border-zinc-100 bg-zinc-50 px-6 py-5 md:px-8">
+        <div className="mb-4 flex gap-4 overflow-x-auto text-sm">
           {["Pedidos", "Faturamento", "Ticket médio", "Novos clientes"].map((item, index) => (
             <span
               key={item}

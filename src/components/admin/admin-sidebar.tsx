@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Boxes,
+  ChevronDown,
   FolderTree,
   Link2,
   Megaphone,
@@ -26,17 +28,23 @@ type NavItem = {
   icon: typeof BarChart3;
 };
 
-type NavGroup = {
-  label?: string;
-  icon?: typeof BarChart3;
-  items: NavItem[];
+type NavSection = {
+  id: string;
+  label: string;
+  icon: typeof BarChart3;
+  href?: string;
+  items?: NavItem[];
 };
 
-const groups: NavGroup[] = [
+const sections: NavSection[] = [
   {
-    items: [{ href: routes.admin.performance, label: "Desempenho", icon: BarChart3 }],
+    id: "desempenho",
+    label: "Desempenho",
+    icon: BarChart3,
+    href: routes.admin.performance,
   },
   {
+    id: "cardapio",
     label: "Cardápio",
     icon: UtensilsCrossed,
     items: [
@@ -46,9 +54,13 @@ const groups: NavGroup[] = [
     ],
   },
   {
-    items: [{ href: routes.admin.orders, label: "Pedidos", icon: ShoppingBag }],
+    id: "pedidos",
+    label: "Pedidos",
+    icon: ShoppingBag,
+    href: routes.admin.orders,
   },
   {
+    id: "marketing",
     label: "Marketing",
     icon: Megaphone,
     items: [
@@ -57,9 +69,13 @@ const groups: NavGroup[] = [
     ],
   },
   {
-    items: [{ href: routes.admin.customers, label: "Clientes", icon: Users }],
+    id: "clientes",
+    label: "Clientes",
+    icon: Users,
+    href: routes.admin.customers,
   },
   {
+    id: "configuracoes",
     label: "Configurações",
     icon: Settings,
     items: [
@@ -69,47 +85,116 @@ const groups: NavGroup[] = [
   },
 ];
 
+function sectionIdFromPath(pathname: string): string | null {
+  if (pathname.startsWith("/admin/cardapio")) return "cardapio";
+  if (pathname.startsWith("/admin/marketing")) return "marketing";
+  if (pathname.startsWith("/admin/configuracoes")) return "configuracoes";
+  return null;
+}
+
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const [openId, setOpenId] = useState<string | null>(() =>
+    sectionIdFromPath(pathname),
+  );
+  const [seenPath, setSeenPath] = useState(pathname);
+
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setOpenId(sectionIdFromPath(pathname));
+  }
+
+  function toggleSection(id: string) {
+    setOpenId((current) => (current === id ? null : id));
+  }
 
   return (
-    <nav className="flex flex-col gap-3 p-3">
-      {groups.map((group) => (
-        <div
-          key={group.label ?? group.items[0].href}
-          className="rounded-2xl bg-zinc-50 p-2"
-        >
-          {group.label ? (
-            <p className="mb-1 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-ink">
-              {group.icon ? <group.icon className="size-4" /> : null}
-              {group.label}
-            </p>
-          ) : null}
-          <ul className="space-y-1">
-            {group.items.map((item) => {
-              const active = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium",
-                      active
-                        ? "bg-brand text-white"
-                        : "text-zinc-600 hover:bg-white",
-                    )}
-                  >
-                    <Icon className="size-4" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+    <nav className="flex flex-col gap-3 overflow-x-hidden p-3">
+      {sections.map((section) => {
+        const Icon = section.icon;
+        const hasChildren = Boolean(section.items?.length);
+        const isOpen = openId === section.id;
+        const childActive = section.items?.some((item) => pathname === item.href) ?? false;
+        const directActive = section.href ? pathname === section.href : false;
+
+        return (
+          <div key={section.id} className="rounded-2xl bg-zinc-50 p-2">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={() => toggleSection(section.id)}
+                aria-expanded={isOpen}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold",
+                  childActive
+                    ? "bg-white text-brand"
+                    : isOpen
+                      ? "bg-white text-ink"
+                      : "text-ink",
+                )}
+              >
+                <Icon className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                <ChevronDown
+                  className={cn(
+                    "size-4 shrink-0 text-zinc-400 transition-transform duration-200",
+                    isOpen && "rotate-180",
+                  )}
+                />
+              </button>
+            ) : (
+              <Link
+                href={section.href ?? "#"}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium",
+                  directActive
+                    ? "bg-brand text-white"
+                    : "text-zinc-600 hover:bg-white",
+                )}
+              >
+                <Icon className="size-4 shrink-0" />
+                <span className="min-w-0 truncate">{section.label}</span>
+              </Link>
+            )}
+
+            {hasChildren ? (
+              <div
+                className={cn(
+                  "grid transition-[grid-template-rows] duration-200 ease-out",
+                  isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                )}
+              >
+                <div className="overflow-hidden">
+                  <ul className="mt-1 space-y-1">
+                    {section.items?.map((item) => {
+                      const ChildIcon = item.icon;
+                      const active = pathname === item.href;
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            onClick={onNavigate}
+                            className={cn(
+                              "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium",
+                              active
+                                ? "bg-brand text-white"
+                                : "text-zinc-600 hover:bg-white",
+                            )}
+                          >
+                            <ChildIcon className="size-4 shrink-0" />
+                            <span className="min-w-0 truncate">{item.label}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </nav>
   );
 }
