@@ -48,11 +48,12 @@ Use clientes separados de staging e produção quando possível.
 
 ## Fluxo
 
-1. Aceite dos termos (cadastro).
-2. Worker inicia OAuth e grava cookie HttpOnly de aceite.
-3. Google devolve o callback no BFF.
-4. Sessão Better Auth no D1.
-5. `/auth/continuar` pergunta o destino no servidor.
-6. Sem loja → onboarding. Com loja → admin/gestor. `platform_admin` → plataforma.
+1. Aceite dos termos (cadastro) grava cookie HttpOnly de aceite.
+2. O navegador chama `/api/mipede/auth/sign-in/social` no mesmo domínio. O Better Auth grava o cookie `state` e o registro em `verification`.
+3. O BFF devolve cada `Set-Cookie` separado e preserva `code`/`state` no callback.
+4. Google devolve o callback no BFF do mesmo domínio e do mesmo D1.
+5. Sessão Better Auth no D1.
+6. `/auth/continuar` pergunta o destino no servidor.
+7. Sem loja → onboarding. Com loja → admin/gestor. `platform_admin` → plataforma.
 
 Convites de equipe ficam desligados até existir um canal seguro de e-mail.

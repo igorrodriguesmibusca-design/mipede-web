@@ -29,7 +29,7 @@ export function GoogleButton({ requireTerms = false }: { requireTerms?: boolean 
     }
     setPending(true);
     try {
-      const response = await fetch("/api/mipede/v1/auth/google/start", {
+      const consent = await fetch("/api/mipede/v1/auth/google/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
@@ -38,12 +38,30 @@ export function GoogleButton({ requireTerms = false }: { requireTerms?: boolean 
           acceptPrivacy: requireTerms ? form.get("acceptPrivacy") === "on" : true,
         }),
       });
-      const payload = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (response.status === 403 && payload.error === "auth_method_unavailable") {
+      const consentPayload = (await consent.json().catch(() => ({}))) as { error?: string };
+      if (consent.status === 403 && consentPayload.error === "auth_method_unavailable") {
         setError("Este método de acesso não está disponível.");
         return;
       }
-      if (!response.ok || !payload.url) {
+      if (!consent.ok) {
+        setError(consentPayload.error === "terms_required" ? "Aceite os Termos e a Política de Privacidade." : "Não foi possível iniciar o acesso com Google.");
+        return;
+      }
+
+      const oauth = await fetch("/api/mipede/auth/sign-in/social", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          provider: "google",
+          callbackURL: "/auth/continuar",
+          errorCallbackURL: "/entrar",
+          disableRedirect: true,
+          requestSignUp: true,
+        }),
+      });
+      const payload = (await oauth.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!oauth.ok || !payload.url) {
         setError("Não foi possível iniciar o acesso com Google.");
         return;
       }

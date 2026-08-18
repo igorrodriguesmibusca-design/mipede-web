@@ -10,6 +10,8 @@ describe("BFF allowlist", () => {
     expect(isAllowedBffPath(["v1", "..", "secrets"])).toBe(false);
     expect(isAllowedBffPath(["https:", "", "evil.test"])).toBe(false);
     expect(isAllowedBffPath([])).toBe(false);
+    expect(isAllowedBffPath(["auth", "sign-in", "social"])).toBe(true);
+    expect(isAllowedBffPath(["auth", "callback", "google"])).toBe(true);
   });
 });
 
