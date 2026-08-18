@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowUpDown, Copy, MoreVertical, Pencil, Search } from "lucide-react";
 
 import { PageHeading } from "@/components/admin/page-heading";
@@ -5,6 +6,7 @@ import { Pagination } from "@/components/admin/pagination";
 import { StatusPill } from "@/components/admin/status-pill";
 import { Switch } from "@/components/ui/switch";
 import { products } from "@/data/mock-products";
+import { routes } from "@/lib/routes";
 import { formatCurrency } from "@/lib/utils";
 
 export default function ProductsPage() {
@@ -14,9 +16,12 @@ export default function ProductsPage() {
         title="Produtos"
         description="Gerencie os itens disponíveis no seu cardápio"
         action={
-          <span className="inline-flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white">
+          <Link
+            href={routes.admin.productNew}
+            className="inline-flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white"
+          >
             Novo produto
-          </span>
+          </Link>
         }
       />
 

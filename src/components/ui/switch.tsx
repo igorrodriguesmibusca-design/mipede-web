@@ -4,9 +4,10 @@ type SwitchProps = {
   checked?: boolean;
   className?: string;
   "aria-label"?: string;
+  onClick?: () => void;
 };
 
-function Switch({ checked = false, className, ...props }: SwitchProps) {
+function Switch({ checked = false, className, onClick, ...props }: SwitchProps) {
   return (
     <button
       type="button"
@@ -17,6 +18,7 @@ function Switch({ checked = false, className, ...props }: SwitchProps) {
         checked ? "bg-brand" : "bg-zinc-300",
         className,
       )}
+      onClick={onClick}
       {...props}
     >
       <span
