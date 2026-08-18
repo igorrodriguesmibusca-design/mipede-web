@@ -2,8 +2,17 @@ import { Bell, Menu, Share2 } from "lucide-react";
 
 import { MipedeLogo } from "@/components/brand/mipede-mark";
 import { store } from "@/data/mock-store";
+import { useTenant } from "@/lib/tenant-context";
 
 export function AdminTopbar({ onMenu }: { onMenu?: () => void }) {
+  const tenant = useTenant();
+  const storeName = tenant.mode === "live" ? (tenant.store?.name ?? "Sua loja") : store.name;
+  const storeStatus =
+    tenant.mode === "live"
+      ? tenant.store?.status === "ACTIVE" || tenant.store?.status === "APPROVED"
+        ? "Em análise / aprovada"
+        : "Aguardando aprovação"
+      : store.status;
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-zinc-100 bg-white px-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -18,9 +27,9 @@ export function AdminTopbar({ onMenu }: { onMenu?: () => void }) {
         <MipedeLogo />
         <span className="hidden h-8 w-px bg-zinc-200 sm:block" />
         <div className="hidden min-w-0 sm:block">
-          <p className="truncate text-sm font-semibold">{store.name}</p>
+          <p className="truncate text-sm font-semibold">{storeName}</p>
           <p className="flex items-center gap-1 text-xs font-medium text-success">
-            {store.status}
+            {storeStatus}
             <span className="size-1.5 rounded-full bg-success" />
           </p>
         </div>
