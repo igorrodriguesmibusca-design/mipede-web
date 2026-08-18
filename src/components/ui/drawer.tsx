@@ -8,9 +8,10 @@ type DrawerProps = {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  className?: string;
 };
 
-export function Drawer({ open, onClose, title, children }: DrawerProps) {
+export function Drawer({ open, onClose, title, children, className }: DrawerProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -36,7 +37,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="drawer-title"
-        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-xl"
+        className={`absolute inset-y-0 right-0 flex w-full flex-col overflow-y-auto bg-white shadow-xl ${className ?? "max-w-md"}`}
       >
         <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
           <h2 id="drawer-title" className="text-lg font-semibold">

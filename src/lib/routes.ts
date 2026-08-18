@@ -21,6 +21,14 @@ export const routes = {
     orderFull: (id: string) => `${STORE_BASE}/pedidos/${id}/completo`,
   },
   bio: "/bio/pizzaria-imperial",
+  manager: {
+    root: "/gestor/pizzaria-imperial",
+    orders: "/gestor/pizzaria-imperial/pedidos",
+    dispatch: "/gestor/pizzaria-imperial/expedicao",
+    catalog: "/gestor/pizzaria-imperial/cardapio",
+    history: "/gestor/pizzaria-imperial/historico",
+    settings: "/gestor/pizzaria-imperial/configuracoes",
+  },
   admin: {
     root: "/admin",
     performance: "/admin/desempenho",
